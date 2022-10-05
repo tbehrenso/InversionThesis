@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 *.Rhistory
 
 *.docx
@@ -6,3 +7,17 @@
 /Outputs
 /Plots
 
+=======
+/Outputs
+/Plots
+
+*.pdf
+*.docx
+
+
+# Ignore hidden R files
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+>>>>>>> master

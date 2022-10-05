@@ -1,0 +1,72 @@
+// Keywords: 
+
+initialize() {
+	// For testing: variable definitions
+	//defineConstant("mu", 1e-6);
+	//defineConstant("s", 0.01);
+	//defineConstant("m", 0.001);
+	//defineConstant("rep", 1);
+	
+	defineConstant("L", 12000);
+	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
+	
+	initializeMutationRate(mu);
+	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
+	initializeMutationType("m2", 0.5, "f", s);  // beneficial by default (p1)
+	
+	initializeGenomicElementType("g1", m1, 1.0);
+	//initializeGenomicElementType("g2", m2, 1.0);	
+	m1.convertToSubstitution = F;	
+	m2.convertToSubstitution = F;
+	initializeGenomicElement(g1, 0, L-1);
+	initializeRecombinationRate(1e-7);
+	
+	m1.mutationStackGroup = -1;   // to make sure separate mutations do not stack at a site
+	m1.mutationStackPolicy = "f";
+	m2.mutationStackGroup = -1;
+	m2.mutationStackPolicy = "f";
+}
+1 late() {
+	sim.addSubpop("p1", 1000);
+	sim.addSubpop("p2", 1000);
+	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
+	p2.setMigrationRates(p1, m);
+
+}
+
+fitness(m2, p2)   // different fitness effect of m2 on p2
+{
+	s2 = (1.0/(1.0+s)-1.0);
+	if (homozygous)
+		return 1.0 + s2;
+	else
+		return 1.0 + s2/2;
+}
+
+1:5000 late() {
+
+}
+
+5000 late() {
+	//p1.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/5000/linkage2P_p1", s, m, rep, ".txt"), sep="_"));
+	//p2.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/5000/linkage2P_p2", s, m, rep, ".txt"), sep="_"));
+	LAA = sample(p1.genomes, 400);  // add Locally Adapted Alleles to half of population 1
+	LAA.addNewDrawnMutation(m2, 3000);
+	LAA.addNewDrawnMutation(m2, 7000);
+}
+
+5000:6000 late(){
+}
+
+6000 late() {
+	//p1.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/6000/linkage2P_p1", s, m, rep, ".txt"), sep="_"));
+	//p2.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/6000/linkage2P_p2", s, m, rep, ".txt"), sep="_"));
+}
+
+6000:7000 late(){
+}
+
+7000 late() {
+	//p1.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/7000/linkage2P_p1", s, m, rep, ".txt"), sep="_"));
+	//p2.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/7000/linkage2P_p2", s, m, rep, ".txt"), sep="_"));
+}

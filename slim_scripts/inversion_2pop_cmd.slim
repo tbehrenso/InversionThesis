@@ -1,0 +1,95 @@
+// Keywords: 
+
+initialize() {
+	// TEMP: variable definitions
+	defineConstant("mu", 1e-6);
+	defineConstant("s", 0.01);
+	defineConstant("m", 0.001);
+	defineConstant("rep", 1);
+	
+	defineConstant("L", 12000);
+	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
+	defineConstant("INV_START", asInteger(L/2 - INV_LENGTH/2));
+	defineConstant("INV_END", INV_START + INV_LENGTH - 1);
+	
+	initializeMutationRate(mu);
+	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
+	initializeMutationType("m2", 0.5, "f", s);  // beneficial by default (p1)
+	initializeMutationType("m3", 0.5, "f", 0.0); // start marker
+	initializeMutationType("m4", 0.5, "f", 0.0); // end marker
+	c(m3,m4).convertToSubstitution = T;
+	c(m3,m4).color = "red";
+	
+	initializeGenomicElementType("g1", m1, 1.0);
+	//initializeGenomicElementType("g2", m2, 1.0);	
+	m1.convertToSubstitution = F;	
+	m2.convertToSubstitution = F;
+	initializeGenomicElement(g1, 0, L-1);
+	initializeRecombinationRate(1e-7);
+	
+	m1.mutationStackGroup = -1;   // to make sure separate mutations do not stack at a site
+	m1.mutationStackPolicy = "f";
+	m2.mutationStackGroup = -1;
+	m2.mutationStackPolicy = "f";
+	// including stack policy for marker mutations. Does not allow true mutations at
+	// those positions, but in output cannot distinguish between them	
+	m3.mutationStackGroup = -1;
+	m3.mutationStackPolicy = "f";
+	m4.mutationStackGroup = -1;
+	m4.mutationStackPolicy = "f";
+	
+}
+1 late() {
+	sim.addSubpop("p1", 1000);
+	sim.addSubpop("p2", 1000);
+	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
+	p2.setMigrationRates(p1, m);
+	inverted = sample(p1.genomes, 1000);  // add inversions to half of population 1
+	inverted.addNewDrawnMutation(m3, INV_START);
+	inverted.addNewDrawnMutation(m4, INV_END);
+	inverted.addNewDrawnMutation(m2, 3000);
+	inverted.addNewDrawnMutation(m2, 7000);
+}
+fitness(m2, p2)   // different fitness effect of m2 on p2
+{
+	s2 = (1.0/(1.0+s)-1.0);
+	if (homozygous)
+		return 1.0 + s2;
+	else
+		return 1.0 + s2/2;
+}
+
+1:1000 late() {
+
+}
+
+1000 late() {
+	//p1.outputMSSample(200, replace=F, filePath=paste(c("RepOutput_Inversion/linkage2P_p1", s, m, rep, ".txt"), sep="_"));
+	//p2.outputMSSample(200, replace=F, filePath=paste(c("RepOutput_Inversion/linkage2P_p2", s, m, rep, ".txt"), sep="_"));
+}
+
+recombination() {
+	gm1 = genome1.containsMarkerMutation(m3, INV_START);
+	gm2 = genome2.containsMarkerMutation(m3, INV_START);
+	if (!(gm1 | gm2)) {
+		// homozygote non-inverted
+		return F;   // Note: Returning F means no change to breakpoints is needed
+	}
+	inInv = (breakpoints > INV_START) & (breakpoints <= INV_END);
+	if (sum(inInv) % 2 == 0) {  // allowing for even number of breakpoints within inversion??
+		return F;
+	}
+	if (gm1 & gm2) {
+		// homozygote inverted
+		left = (breakpoints == INV_START);
+		right = (breakpoints == INV_END + 1);
+		breakpoints = sort(c(breakpoints[!(left | right)],
+			c(INV_START, INV_END + 1)[c(sum(left) == 0, sum(right) == 0)]));
+		return T;
+	} else {
+		// heterozygote inverted: resample to get an even # of breakpoints
+		// this is *recursive*: it calls this recombination callback again!
+		breakpoints = sim.chromosome.drawBreakpoints(individual);
+	}
+	return T;
+} 
