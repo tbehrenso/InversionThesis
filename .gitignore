@@ -1,0 +1,8 @@
+*.Rhistory
+
+*.docx
+*.pdf
+
+/Outputs
+/Plots
+
