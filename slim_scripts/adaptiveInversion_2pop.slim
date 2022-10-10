@@ -11,6 +11,7 @@ initialize() {
 	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
 	defineConstant("INV_START", asInteger(L/2 - INV_LENGTH/2));
 	defineConstant("INV_END", INV_START + INV_LENGTH - 1);
+	defineConstant("ALLELE_STARTING_FREQ", 50);
 	
 	initializeMutationRate(mu);
 	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
@@ -36,6 +37,8 @@ initialize() {
 }
 
 1 late() {
+	defineConstant("simID", getSeed());
+	
 	sim.addSubpop("p1", 1000);
 	sim.addSubpop("p2", 1000);
 	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
@@ -56,9 +59,12 @@ fitness(m3, p2)   // different fitness effect of m3 on p2
 }
 
 5000 late() {
+	// save the state of the simulation (for looping back to)
+	sim.outputFull(tempdir() + "slim5000_" + simID + ".txt");
+
 	//p1.outputMSSample(200, replace=F, filePath=paste(c("Outputs/adaptiveInversion_12k/5000/linkage2P_p1", s, m, rep, ".txt"), sep="_"));
 	//p2.outputMSSample(200, replace=F, filePath=paste(c("Outputs/adaptiveInversion_12k/5000/linkage2P_p2", s, m, rep, ".txt"), sep="_"));
-	inverted = sample(p1.genomes, 400);  // add inversions to half of population 1
+	inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add inversions to half of population 1
 	inverted.addNewDrawnMutation(m3, INV_START);
 	inverted.addNewDrawnMutation(m4, INV_END);
 }
@@ -72,6 +78,28 @@ fitness(m3, p2)   // different fitness effect of m3 on p2
 }
 
 6000:7000 late(){
+}
+
+5000:7000 late(){
+	// restart end part of sim (5000+) if inversion is lost	
+	if(sim.countOfMutationsOfType(m3) == 0)
+	{
+		cat(simID + ": LOST – RESTARTING\n");
+		// go back to generation 1000
+		sim.readFromPopulationFile(tempdir() + "slim5000_" + simID + ".txt");
+		
+		// reinitialize migration rates
+		p1.setMigrationRates(p2, m); 
+		p2.setMigrationRates(p1, m);		
+		
+		// start a newly seeded run
+		setSeed(rdunif(1, 0, asInteger(2^62) - 1));
+		
+		// re-introduce the sweep mutation
+		inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);
+		inverted.addNewDrawnMutation(m3, INV_START);
+		inverted.addNewDrawnMutation(m4, INV_END);		
+	}
 }
 
 7000 late() {

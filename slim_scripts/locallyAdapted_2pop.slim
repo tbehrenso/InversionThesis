@@ -2,13 +2,14 @@
 
 initialize() {
 	// For testing: variable definitions
-	//defineConstant("mu", 1e-6);
-	//defineConstant("s", 0.01);
-	//defineConstant("m", 0.001);
-	//defineConstant("rep", 1);
+	defineConstant("mu", 1e-6);
+	defineConstant("s", 0.01);
+	defineConstant("m", 0.001);
+	defineConstant("rep", 1);
 	
 	defineConstant("L", 12000);
 	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
+	defineConstant("ALLELE_STARTING_FREQ", 50);	
 	
 	initializeMutationRate(mu);
 	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
@@ -27,6 +28,8 @@ initialize() {
 	m2.mutationStackPolicy = "f";
 }
 1 late() {
+	defineConstant("simID", getSeed());
+
 	sim.addSubpop("p1", 1000);
 	sim.addSubpop("p2", 1000);
 	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
@@ -48,9 +51,12 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 }
 
 5000 late() {
+	// save the state of the simulation (for looping back to)
+	sim.outputFull(tempdir() + "slim5000_" + simID + ".txt");
+	
 	//p1.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/5000/linkage2P_p1", s, m, rep, ".txt"), sep="_"));
 	//p2.outputMSSample(200, replace=F, filePath=paste(c("Outputs/locallyAdapted_12k/5000/linkage2P_p2", s, m, rep, ".txt"), sep="_"));
-	LAA = sample(p1.genomes, 400);  // add Locally Adapted Alleles to half of population 1
+	LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add Locally Adapted Alleles to half of population 1
 	LAA.addNewDrawnMutation(m2, 3000);
 	LAA.addNewDrawnMutation(m2, 7000);
 }
@@ -64,6 +70,28 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 }
 
 6000:7000 late(){
+}
+
+5000:7000 late(){
+	// restart end part of sim (5000+) if locally adapted alleles are lost	
+	if(sim.countOfMutationsOfType(m2) < 2)
+	{
+		cat(simID + ": LOST – RESTARTING\n");
+		// go back to generation 1000
+		sim.readFromPopulationFile(tempdir() + "slim5000_" + simID + ".txt");
+		
+		// reinitialize migration rates
+		p1.setMigrationRates(p2, m); 
+		p2.setMigrationRates(p1, m);		
+		
+		// start a newly seeded run
+		setSeed(rdunif(1, 0, asInteger(2^62) - 1));
+		
+		// re-introduce the sweep mutation
+		LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);		
+		LAA.addNewDrawnMutation(m2, 3000);
+		LAA.addNewDrawnMutation(m2, 7000);
+	}
 }
 
 7000 late() {
