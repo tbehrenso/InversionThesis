@@ -7,7 +7,9 @@ totalLength <- GENOME_LENGTH
 seqLen <- WINDOW_SIZE
 centerSpacing <- WINDOW_SPACING
 
-
+# -----------------------------------------------------
+#    NUCDIV
+# -----------------------------------------------------
 
 
 calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
@@ -43,21 +45,11 @@ m2 <- round(matrix(runif(200*10), 200, 10))
 dist2 <- dist(m2, method='manhattan')
 sum(dist2)/choose(200,2)/200
 
-
-
-
-
 for(i in 1:n_files){
   filepath <- paste0(PATH, "/", files[i])
   ms_binary <- get_ms_data(filepath)
   abs_positions <- get_positions(filepath)
 }
-
-
-
-
-
-
 
 
 

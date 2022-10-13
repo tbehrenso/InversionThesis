@@ -17,7 +17,7 @@ FIXED_MUTATION_POS2 <- 7000
 INV_START <- 1000
 INV_END <- 11000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 # PATH <- "RepOutput_Inversion_Burnin_20percent/6000/"
-PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/6000"
+PATH <- "Outputs/locallyAdapted_2pop_s0.01_m0.001_mu1e-6/7000"
 WINDOW_SPACING <- 100
 WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 40
@@ -77,7 +77,10 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       # at a given position (center), nucdiv is the average number of differences divided by the length of the sequence window
       # Note: average number of differences is the total number of pairwise differences / the number of pairwise difference nChoosek
-      output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
+      
+      
+      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
+      output[output$position==seqCenter,2] <- (sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
     }
   }
   return(output)
@@ -105,7 +108,8 @@ get_correlations <- function(msdata, positions, numTiles=20){
   
   # prep storage (with default value of 1 for the diagonal)
   num_sites <- length(positions)
-  corr_all <- cor(msdata)
+  # use default method (pearson)
+  corr_all <- cor(msdata, method="pearson")
   return(corr_all)
 }
 
