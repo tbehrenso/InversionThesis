@@ -14,7 +14,12 @@
 *.pdf
 *.docx
 
+<<<<<<< HEAD
 ProjectDescription_Website.txt
+=======
+slim
+SLiM
+>>>>>>> 7c93d8dd5f0686bde1225730a2aaff5bd2efe466
 
 # Ignore hidden R files
 .Rhistory
