@@ -7,9 +7,9 @@ initialize() {
 	//defineConstant("m", 0.001);
 	//defineConstant("rep", 1);
 	
-	defineConstant("L", 12000);
+	defineConstant("L", 22000);
 	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
- 	defineConstant("ALLELE_STARTING_FREQ", 50);
+	defineConstant("ALLELE_STARTING_FREQ", 50);
 	
 	initializeMutationRate(mu);
 	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
@@ -17,7 +17,7 @@ initialize() {
 	
 	initializeGenomicElementType("g1", m1, 1.0);
 	//initializeGenomicElementType("g2", m2, 1.0);	
-	m1.convertToSubstitution = F;	
+	m1.convertToSubstitution = F;
 	m2.convertToSubstitution = F;
 	initializeGenomicElement(g1, 0, L-1);
 	initializeRecombinationRate(1e-7);
@@ -29,7 +29,7 @@ initialize() {
 }
 1 late() {
 	defineConstant("simID", getSeed());
- 
+	
 	sim.addSubpop("p1", 1000);
 	sim.addSubpop("p2", 1000);
 	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
@@ -53,26 +53,16 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 5000 late() {
 	// save the state of the simulation (for looping back to)
 	sim.outputFull(tempdir() + "slim5000_" + simID + ".txt");
- 
-	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	
+	p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add Locally Adapted Alleles to half of population 1
-	LAA.addNewDrawnMutation(m2, 3000);
-	LAA.addNewDrawnMutation(m2, 7000);
+	LAA.addNewDrawnMutation(m2, 8000);
+	LAA.addNewDrawnMutation(m2, 12000);
 }
 
-5000:6000 late(){
-}
 
-6000 late() {
-	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/6000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/6000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
-}
-
-6000:7000 late(){
-}
-
-5000:7000 late(){
+5000:15000 late(){
 	// restart end part of sim (5000+) if locally adapted alleles are lost	
 	if(sim.countOfMutationsOfType(m2) < 2)
 	{
@@ -81,20 +71,20 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 		sim.readFromPopulationFile(tempdir() + "slim5000_" + simID + ".txt");
 		
 		// reinitialize migration rates
-		p1.setMigrationRates(p2, m); 
-		p2.setMigrationRates(p1, m);		
+		p1.setMigrationRates(p2, m);
+		p2.setMigrationRates(p1, m);
 		
 		// start a newly seeded run
 		setSeed(rdunif(1, 0, asInteger(2^62) - 1));
 		
 		// re-introduce the sweep mutation
-		LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);		
-		LAA.addNewDrawnMutation(m2, 3000);
-		LAA.addNewDrawnMutation(m2, 7000);
+		LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);
+		LAA.addNewDrawnMutation(m2, 8000);
+		LAA.addNewDrawnMutation(m2, 12000);
 	}
-}
-
-7000 late() {
-	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/7000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/7000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	// create output every 1000 generations	
+	if (any(sim.generation == c(6:15)*1000)) {
+		p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+		p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	}
 }
