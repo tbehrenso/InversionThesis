@@ -54,8 +54,8 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 	// save the state of the simulation (for looping back to)
 	sim.outputFull(tempdir() + "slim5000_" + simID + ".txt");
 	
-	p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add Locally Adapted Alleles to half of population 1
 	LAA.addNewDrawnMutation(m2, 8000);
 	LAA.addNewDrawnMutation(m2, 12000);
@@ -84,7 +84,7 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 	}
 	// create output every 1000 generations	
 	if (any(sim.generation == c(6:15)*1000)) {
-		p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-		p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+		p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+		p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	}
 }

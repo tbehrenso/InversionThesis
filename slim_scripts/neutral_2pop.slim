@@ -33,14 +33,14 @@ initialize() {
 }
 
 5000 late() {
-	p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 }
 
 5000:15000 late() {
 	// create output every 1000 generations	
 	if (any(sim.generation == c(6:15)*1000)) {
-		p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-		p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+		p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+		p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	}
 }
