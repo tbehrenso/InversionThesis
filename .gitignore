@@ -19,7 +19,10 @@ ProjectDescription_Website.txt
 =======
 slim
 SLiM
-!slim_
+!slim_sc
+/slim_output
+/errors_slim
+
 >>>>>>> 7c93d8dd5f0686bde1225730a2aaff5bd2efe466
 
 # Ignore hidden R files
