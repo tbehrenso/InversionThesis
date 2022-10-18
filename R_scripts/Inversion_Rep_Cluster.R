@@ -1,29 +1,32 @@
+# CHANGES FROM NON-CLUSTER VERSION
+# does not set working directory
+# constructs path manually from command line arguments
+# saves plots to variable to then save with ggsave
 
 library(ggplot2)
 library(gridExtra)
 library(reshape2)
 library(tidyr)
 
-#args = commandArgs(trailingOnly=TRUE)
+args = commandArgs(trailingOnly=TRUE)
 
 #-----------------------------------------------------------
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 12000
-FIXED_MUTATION_POS1 <- 3000
-FIXED_MUTATION_POS2 <- 7000
-INV_START <- 1000
-INV_END <- 11000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-# PATH <- "RepOutput_Inversion_Burnin_20percent/6000/"
-PATH <- "Outputs/neutral_12k"
+GENOME_LENGTH <- 22000
+FIXED_MUTATION_POS1 <- 8000
+FIXED_MUTATION_POS2 <- 12000
+INV_START <- 6000
+INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+PATH <- paste("Outputs", args[1], arg[2], sep="/")
 WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 40
 
 # record presence or absence of inversion and locally adapted alleles
-INVERSION_PRESENT <- FALSE
-LAA_PRESENT <- FALSE
+INVERSION_PRESENT <- TRUE
+LAA_PRESENT <- TRUE
 
 
 #-----------------------------------------------------------
@@ -76,7 +79,10 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       # at a given position (center), nucdiv is the average number of differences divided by the length of the sequence window
       # Note: average number of differences is the total number of pairwise differences / the number of pairwise difference nChoosek
-      output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
+      
+      
+      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
+      output[output$position==seqCenter,2] <- (sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
     }
   }
   return(output)
@@ -104,7 +110,8 @@ get_correlations <- function(msdata, positions, numTiles=20){
   
   # prep storage (with default value of 1 for the diagonal)
   num_sites <- length(positions)
-  corr_all <- cor(msdata)
+  # use default method (pearson)
+  corr_all <- cor(msdata, method="pearson")
   return(corr_all)
 }
 
@@ -195,6 +202,34 @@ get_neutral_frequency <- function(){
   overall_neutral_frequency <- sum(apply(neutral_frequencies, 1, prod) / sum(neutral_frequencies[,2]))
   return(overall_neutral_frequency)
 }
+
+# get frequency of locally adapted alleles. 
+get_allele_frequency <- function(){
+  freq_allele1 <- numeric(n_files)
+  freq_allele2 <- numeric(n_files)
+  for(i in 1:n_files){
+    filepath <- paste0(PATH, "/", files[i])
+    ms_binary <- get_ms_data(filepath)
+    abs_positions <- get_positions(filepath)
+    
+    if(FIXED_MUTATION_POS1 %in% abs_positions){
+      freq_allele1[i] <- mean(ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)])
+    }
+    if(FIXED_MUTATION_POS2 %in% abs_positions){
+      freq_allele2[i] <- mean(ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)])
+    }
+  }
+  allele1_freq_p1 <- mean(freq_allele1[tags_index$population=='p1'])
+  allele1_freq_p2 <- mean(freq_allele1[tags_index$population=='p2'])
+  allele2_freq_p1 <- mean(freq_allele2[tags_index$population=='p1'])
+  allele2_freq_p2 <- mean(freq_allele2[tags_index$population=='p2'])
+  
+  print(paste('P1 Allele1 Frequency:', allele1_freq_p1))
+  print(paste('P1 Allele2 Frequency:', allele2_freq_p1))
+  print(paste('P2 Allele1 Frequency:', allele1_freq_p2))
+  print(paste('P2 Allele2 Frequency:', allele2_freq_p2))
+}
+
 
 # -------------------------------------------------------------------------------------------
 # DATA EXTRACTION
@@ -484,9 +519,12 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
   {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
 
 
-ggsave('nucdiv_hexp.png', plot_nucdiv_hexp)
-ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes)
-ggsave('correlation.png', plot_correlation)
-ggsave('fst.png', plot_fst)
+
+
+ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], arg[2], sep="/"))
+ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], arg[2], sep="/"))
+ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], arg[2], sep="/"))
+ggsave('fst.png', plot_fst, path=paste("Plots", args[1], arg[2], sep="/"))
+
 
 
