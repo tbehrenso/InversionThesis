@@ -19,7 +19,7 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-PATH <- paste("Outputs", args[1], arg[2], sep="/")
+PATH <- paste("Outputs", args[1], args[2], sep="/")
 WINDOW_SPACING <- 100
 WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 40
@@ -521,10 +521,10 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
 
 
 
-ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], arg[2], sep="/"))
-ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], arg[2], sep="/"))
-ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], arg[2], sep="/"))
-ggsave('fst.png', plot_fst, path=paste("Plots", args[1], arg[2], sep="/"))
+ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"))
+ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"))
+ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"))
+ggsave('fst.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"))
 
 
 
