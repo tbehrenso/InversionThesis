@@ -11,16 +11,16 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 12000
-FIXED_MUTATION_POS1 <- 3000
-FIXED_MUTATION_POS2 <- 7000
-INV_START <- 1000
-INV_END <- 11000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+GENOME_LENGTH <- 22000
+FIXED_MUTATION_POS1 <- 8000
+FIXED_MUTATION_POS2 <- 12000
+INV_START <-6000
+INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 # PATH <- "RepOutput_Inversion_Burnin_20percent/6000/"
-PATH <- "Outputs/locallyAdapted_2pop_s0.01_m0.001_mu1e-6/7000"
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 40
+PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/7000"
+WINDOW_SPACING <- 200
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 60
 
 # record presence or absence of inversion and locally adapted alleles
 INVERSION_PRESENT <- TRUE
@@ -80,7 +80,7 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
       
       
       # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
-      output[output$position==seqCenter,2] <- (sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
+      output[output$position==seqCenter,2] <- (2*sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
     }
   }
   return(output)
