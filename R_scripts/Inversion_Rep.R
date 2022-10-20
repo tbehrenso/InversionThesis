@@ -511,8 +511,76 @@ fst_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_all, 
 ggplot(fst_average, aes(x=pos, y=av_fst)) +
   geom_line() +
   scale_fill_gradient(low='white', high='blue') +
-  #ggtitle('F_ST across Genome') + 
+  ggtitle('F_ST between Populations') + 
   xlab('Position') + ylab(expression(F[ST])) +
   {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
   {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
+
+###### FST -- SEPARATING HaPLOTYPES
+
+fst_windowed_haplotypes_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
+
+for(repl in 1:max(tags_index$repl)){
+  # get and prepare ms_data
+  filepath_p1 <- paste0(PATH, "/", files[which(tags_index$population=='p1' & tags_index$repl==repl)])
+  filepath_p2 <- paste0(PATH, "/", files[which(tags_index$population=='p2' & tags_index$repl==repl)])
+  ms_p1 <- get_ms_data(filepath_p1)
+  ms_p2 <- get_ms_data(filepath_p2)
+  pos_p1 <- get_positions(filepath_p1)
+  pos_p2 <- get_positions(filepath_p2)
+  pos_both <- unique(sort(c(pos_p1, pos_p2)))
+  colnames(ms_p1) <- pos_p1
+  colnames(ms_p2) <- pos_p2
+  n_indiv <- dim(ms_p1)[1]
+  
+  ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
+  colnames(ms_both) <- pos_both
+  # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
+  ms_both[1:200,as.character(pos_p1)] <- ms_p1
+  ms_both[201:400,as.character(pos_p2)] <- ms_p2
+  # extract rows based on the presence of both inversion markers
+  ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
+  ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
+  
+  # prep storage
+  hexp_df <- data.frame(pos=pos_both, normal=numeric(length(pos_both)), inverted=numeric(length(pos_both)), total=numeric(length(pos_both)))
+  fst_all <- data.frame(pos=pos_both, fst=numeric(length(pos_both)))
+  
+  for(i in 1:length(pos_both)){
+    # extract columns at current positions
+    ms_vect_normal <- ms_normal[ ,as.character(pos_both[i])]
+    ms_vect_inverted <- ms_inverted[ ,as.character(pos_both[i])]
+    # calc hexp as 2pq
+    hexp_df$normal[i] <- 2 * mean(ms_vect_normal) * (1 - mean(ms_vect_normal))
+    hexp_df$inverted[i] <- 2 * mean(ms_vect_inverted) * (1 - mean(ms_vect_inverted))
+    av_hexp <- mean(hexp_df$normal[i], hexp_df$inverted[i])
+    # combine ms data to get hexp of total metapopulation
+    ms_vect_both <- c(ms_vect_normal, ms_vect_inverted)
+    hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
+    hexp_df$total[i] <- hexp_total
+    # calculate F_ST as (Ht - Hs) / Ht
+    fst_all$fst[i] <- (hexp_total - av_hexp) / hexp_total
+  }
+  fst_all <- fst_all[fst_all$pos!=INV_START & fst_all$pos!=INV_END-1,]
+  
+  fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
+  fst_windowed_haplotypes_all[repl,] <- fst_windowed[,2]
+}
+
+fst_haplotypes_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_haplotypes_all, na.rm = T), 
+                          stdev=apply(fst_windowed_haplotypes_all, 2, sd, na.rm=T))
+
+ggplot(fst_haplotypes_average, aes(x=pos, y=av_fst)) +
+  geom_line() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('F_ST between Haplotypes') + 
+  xlab('Position') + ylab(expression(F[ST])) +
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
+
+
+# for testing different window sizes
+WINDOW_SPACING <- 100
+WINDOW_SIZE <- 50
+window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 
