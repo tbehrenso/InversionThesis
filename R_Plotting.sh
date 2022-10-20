@@ -3,9 +3,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4000M
 #SBATCH --time=8:00:00
-#SBATCH --job-name=slimjob
-#SBATCH --output=/data/users/tbehrens/InversionThesis/slim_output/slim_%j.o
-#SBATCH --error=/data/users/tbehrens/InversionThesis/errors_slim/error_slim_%j.e
+#SBATCH --job-name=R_Plotting
+#SBATCH --output=/data/users/tbehrens/InversionThesis/slim_output/RPlot_%j.o
+#SBATCH --error=/data/users/tbehrens/InversionThesis/errors_slim/error_RPlot_%j.e
 #SBATCH --mail-user=thomas.behrens@students.unibe.ch
 #SBATCH --mail-type=fail
 
@@ -16,7 +16,7 @@ m=0.001
 mu=1e-6
 nrep=100
 
-sim_type=inversionLAA_2pop
+sim_type=neutral_2pop
 dir_name=${sim_type}_s${s}_m${m}_mu${mu}
 
 mkdir Plots/${dir_name}
