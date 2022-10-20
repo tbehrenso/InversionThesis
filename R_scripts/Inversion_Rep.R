@@ -477,17 +477,23 @@ for(repl in 1:max(tags_index$repl)){
   #### IGNORING IF IT IS MISSING IN ONE POP OR THE OTHER ####
   #pos_both <- intersect(pos_p1, pos_p2)
   
+  ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
+  colnames(ms_both) <- pos_both
+  # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
+  ms_both[1:200,as.character(pos_p1)] <- ms_p1
+  ms_both[201:400,as.character(pos_p2)] <- ms_p2
+  # extract rows again (so ms_p1 and ms_p2 now have all positions, with missing positions filled with zeros)
+  ms_p1 <- ms_both[1:200,]
+  ms_p2 <- ms_both[201:400,]
+  
   # storage
   hexp_df <- data.frame(pos=pos_both, p1=numeric(length(pos_both)), p2=numeric(length(pos_both)), total=numeric(length(pos_both)))
   fst_all <- data.frame(pos=pos_both, fst=numeric(length(pos_both)))
   
   for(i in 1:length(pos_both)){
-    if(pos_both[i] %in% pos_p1){
-      ms_vect_p1 <- ms_p1[,as.character(pos_both[i])]
-    } else {ms_vect_p1 <- numeric(n_indiv)}  # if position is not present, the mutation has frequency of 0 at that locus
-    if(pos_both[i] %in% pos_p2){
-      ms_vect_p2 <- ms_p2[,as.character(pos_both[i])]
-    } else {ms_vect_p2 <- numeric(n_indiv)}
+    # extract columns at current positions
+    ms_vect_p1 <- ms_p1[ ,as.character(pos_both[i])]
+    ms_vect_p2 <- ms_p2[ ,as.character(pos_both[i])]
     # calc hexp as 2pq
     hexp_df$p1[i] <- 2 * mean(ms_vect_p1) * (1 - mean(ms_vect_p1))
     hexp_df$p2[i] <- 2 * mean(ms_vect_p2) * (1 - mean(ms_vect_p2))
