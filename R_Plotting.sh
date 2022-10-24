@@ -16,7 +16,7 @@ m=0.001
 mu=1e-6
 nrep=100
 
-sim_type=neutral_2pop
+sim_type=locallyAdapted_2pop
 dir_name=${sim_type}_s${s}_m${m}_mu${mu}
 
 mkdir Plots/${dir_name}
@@ -26,7 +26,7 @@ Outputs/${dir_name}/{5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,1500
 
 for i in {5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000}
 do
-	Rscript R_scripts/Inversion_Rep_Cluster.R ${dir_name} $i
+	Rscript R_scripts/Inversion_Rep_General.R ${dir_name} $i
 done
 
 
