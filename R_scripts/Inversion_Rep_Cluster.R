@@ -528,7 +528,7 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
 
 ###### FST -- SEPARATING HaPLOTYPES
 
-if(INVERSION_PRESENT){
+if(INVERSION_PRESENT && as.integer(args[2]) > 5000){
   fst_windowed_haplotypes_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
   
   for(repl in 1:max(tags_index$repl)){

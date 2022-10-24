@@ -1,11 +1,17 @@
-setwd("C:/Users/tbehr/Desktop/Thesis")
+# determine whether on cluster or local
+on_cluster <- Sys.info()['sysname']=='Linux'
+
+if(on_cluster){
+  # first argument is directory name, second is generation time point
+  args = commandArgs(trailingOnly=TRUE)
+}else{
+  setwd("C:/Users/tbehr/Desktop/Thesis")
+  }
 
 library(ggplot2)
 library(gridExtra)
 library(reshape2)
 library(tidyr)
-
-#args = commandArgs(trailingOnly=TRUE)
 
 #-----------------------------------------------------------
 # PARAMETERS
@@ -14,18 +20,25 @@ library(tidyr)
 GENOME_LENGTH <- 22000
 FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
-INV_START <-6000
+INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-# PATH <- "RepOutput_Inversion_Burnin_20percent/6000/"
-PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/7000"
 WINDOW_SPACING <- 200
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 60
 
-# record presence or absence of inversion and locally adapted alleles
-INVERSION_PRESENT <- TRUE
-LAA_PRESENT <- TRUE
+if(on_cluster){
+  PATH <- paste("Outputs", args[1], args[2], sep="/")
+  simtype <- strsplit(args[1], split='_')[[1]][1]
+  generation <- as.integer(args[2])
+}else{
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/7000"
+  simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
+  generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
+}
 
+# record presence or absence of inversion and locally adapted alleles
+INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
+LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE, FALSE)
 
 #-----------------------------------------------------------
 # FUNCTIONS
@@ -523,7 +536,8 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
   {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
 
 ###### FST -- SEPARATING HaPLOTYPES
-if(INVERSION_PRESENT){
+
+if(INVERSION_PRESENT && generation > 5000){
   fst_windowed_haplotypes_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
   
   for(repl in 1:max(tags_index$repl)){
@@ -574,7 +588,7 @@ if(INVERSION_PRESENT){
   }
   
   fst_haplotypes_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_haplotypes_all, na.rm = T), 
-                            stdev=apply(fst_windowed_haplotypes_all, 2, sd, na.rm=T))
+                                       stdev=apply(fst_windowed_haplotypes_all, 2, sd, na.rm=T))
   
   plot_fst_haplotypes <- ggplot(fst_haplotypes_average, aes(x=pos, y=av_fst)) +
     geom_line() +
@@ -584,17 +598,22 @@ if(INVERSION_PRESENT){
     {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
     {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
   
-  plot_fst_haplotypes
+  if(on_cluster){
+    ggsave('fst_haps.png', plot_fst_haplotypes, path=paste("Plots", args[1], args[2], sep="/"))
+  }else{
+    plot_fst_haplotypes
+  }
 }
 
-# view plots (the ones created with grid.arrange are displayed automatically)
-plot_nucdiv_haplotypes
-plot_fst
+if(on_cluster){
+  ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"))
+  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"))
+  ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"))
+  ggsave('fst_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"))
+}else{
+  # view plots (the ones created with grid.arrange are displayed automatically)
+  print(plot_nucdiv_haplotypes)
+  print(plot_fst)
+}
 
-
-
-# for testing different window sizes
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 50
-window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 
