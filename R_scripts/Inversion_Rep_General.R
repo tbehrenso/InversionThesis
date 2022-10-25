@@ -241,6 +241,37 @@ get_allele_frequency <- function(){
   print(paste('P2 Allele2 Frequency:', allele2_freq_p2))
 }
 
+# calculate differentiation (Fst) between two groups in ms format, with column names of their positions
+# Note: removes inversion markers
+calc_fst_between <- function(msGroup1, msGroup2){
+  # extract positions from column names
+  allPositions <- unique(sort(c(as.integer(colnames(msGroup1)), as.integer(colnames(msGroup2)))))
+  
+  # storage
+  hexp_df <- data.frame(pos=allPositions, group1=numeric(length(allPositions)), group2=numeric(length(allPositions)), 
+                        total=numeric(length(allPositions)))
+  fst_all <- data.frame(pos=allPositions, fst=numeric(length(allPositions)))
+  
+  for(i in 1:length(allPositions)){
+    # extract columns at current positions
+    ms_vect_1 <- msGroup1[ ,as.character(allPositions[i])]
+    ms_vect_2 <- msGroup2[ ,as.character(allPositions[i])]
+    # calc hexp as 2pq
+    hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
+    hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
+    av_hexp <- mean(hexp_df$group1[i], hexp_df$group2[i])
+    # combine ms data to get hexp of total metapopulation
+    ms_vect_both <- c(ms_vect_1, ms_vect_2)
+    hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
+    hexp_df$total[i] <- hexp_total
+    # calculate F_ST as (Ht - Hs) / Ht
+    fst_all$fst[i] <- (hexp_total - av_hexp) / hexp_total
+  }
+  # remove inversion markers
+  fst_all <- fst_all[fst_all$pos!=INV_START & fst_all$pos!=INV_END-1,]
+  return(fst_all)
+}
+
 
 # -------------------------------------------------------------------------------------------
 # DATA EXTRACTION
@@ -307,12 +338,17 @@ nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_d
 nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p2'),], na.rm=T),
                              stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
 
+# reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
+gglayer_markers <- list(
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
+  )
+
 hexp_a <- ggplot(hexp_summ_p1, aes(x=center, y=hexp)) +
   geom_line() +
   scale_color_brewer(palette="Dark2")+
   ggtitle('a) Expected Heterozygosity - P1') +
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)} +
+  gglayer_markers +
   xlab('Position') + ylab(expression(H[exp]))
 #ylim(c(0.061, 0.106))
 
@@ -320,19 +356,15 @@ hexp_b <- ggplot(hexp_summ_p2, aes(x=center, y=hexp)) +
   geom_line() +
   scale_color_brewer(palette="Dark2") +
   ggtitle('b) Expected Heterozygosity - P2') +
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)} +
+  gglayer_markers +
   xlab('Position') + ylab(expression(H[exp]))
 #ylim(c(0.061, 0.106))
-
-#  grid.arrange(hexp_a, hexp_b, nrow=1)
 
 nucdiv_a <- ggplot(nucdiv_summ_p1, aes(x=center, y=nucdiv)) +
   geom_line() +
   scale_color_brewer(palette="Dark2")+
   ggtitle('c) Nucleotide Diversity - P1') +
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)} +
+  gglayer_markers +
   xlab('Position') + ylab('\u03c0')
 #ylim(c(0.0014, 0.0029))
 
@@ -340,13 +372,10 @@ nucdiv_b <- ggplot(nucdiv_summ_p2, aes(x=center, y=nucdiv)) +
   geom_line() +
   scale_color_brewer(palette="Dark2")+
   ggtitle('d) Nucleotide Diversity - P2') +
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)} +
+  gglayer_markers +
   #geom_errorbar(aes(ymin=nucdiv-stdev, ymax=nucdiv+stdev), width=1, position=position_dodge(0.1)) +
   xlab('Position') + ylab('\u03c0')
 #ylim(c(0.0014, 0.0029))
-
-#  grid.arrange(nucdiv_a, nucdiv_b, nrow=1)
 
 plot_nucdiv_hexp <- grid.arrange(hexp_a, hexp_b, nucdiv_a, nucdiv_b, nrow=2)
 
@@ -431,8 +460,7 @@ nucdiv_all_long <- melt(nucdiv_all, id='center')
 plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=variable)) +
   geom_line() +
   ggtitle('Nucleotide Diversity for Different Haplotypes') +
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.3)}
+  gglayer_markers
 
 #-----------------------------------------------------------
 # CORRELATION
@@ -499,27 +527,8 @@ for(repl in 1:max(tags_index$repl)){
   ms_p1 <- ms_both[1:200,]
   ms_p2 <- ms_both[201:400,]
   
-  # storage
-  hexp_df <- data.frame(pos=pos_both, p1=numeric(length(pos_both)), p2=numeric(length(pos_both)), total=numeric(length(pos_both)))
-  fst_all <- data.frame(pos=pos_both, fst=numeric(length(pos_both)))
-  
-  for(i in 1:length(pos_both)){
-    # extract columns at current positions
-    ms_vect_p1 <- ms_p1[ ,as.character(pos_both[i])]
-    ms_vect_p2 <- ms_p2[ ,as.character(pos_both[i])]
-    # calc hexp as 2pq
-    hexp_df$p1[i] <- 2 * mean(ms_vect_p1) * (1 - mean(ms_vect_p1))
-    hexp_df$p2[i] <- 2 * mean(ms_vect_p2) * (1 - mean(ms_vect_p2))
-    av_hexp <- mean(hexp_df$p1[i], hexp_df$p2[i])
-    # combine ms data to get hexp of total metapopulation
-    ms_vect_both <- c(ms_vect_p1, ms_vect_p2)
-    hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
-    hexp_df$total[i] <- hexp_total
-    # calculate F_ST as (Ht - Hs) / Ht
-    fst_all$fst[i] <- (hexp_total - av_hexp) / hexp_total
-  }
-  fst_all <- fst_all[fst_all$pos!=INV_START & fst_all$pos!=INV_END-1,]
-  
+  fst_all <- calc_fst_between(ms_p1, ms_p2)
+
   fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
   fst_windowed_all[repl,] <- fst_windowed[,2]
 }
@@ -532,8 +541,7 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
   scale_fill_gradient(low='white', high='blue') +
   ggtitle('F_ST between Populations') + 
   xlab('Position') + ylab(expression(F[ST])) +
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
+  gglayer_markers
 
 ###### FST -- SEPARATING HaPLOTYPES
 
@@ -562,26 +570,7 @@ if(INVERSION_PRESENT && generation > 5000){
     ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
     ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
     
-    # prep storage
-    hexp_df <- data.frame(pos=pos_both, normal=numeric(length(pos_both)), inverted=numeric(length(pos_both)), total=numeric(length(pos_both)))
-    fst_all <- data.frame(pos=pos_both, fst=numeric(length(pos_both)))
-    
-    for(i in 1:length(pos_both)){
-      # extract columns at current positions
-      ms_vect_normal <- ms_normal[ ,as.character(pos_both[i])]
-      ms_vect_inverted <- ms_inverted[ ,as.character(pos_both[i])]
-      # calc hexp as 2pq
-      hexp_df$normal[i] <- 2 * mean(ms_vect_normal) * (1 - mean(ms_vect_normal))
-      hexp_df$inverted[i] <- 2 * mean(ms_vect_inverted) * (1 - mean(ms_vect_inverted))
-      av_hexp <- mean(hexp_df$normal[i], hexp_df$inverted[i])
-      # combine ms data to get hexp of total metapopulation
-      ms_vect_both <- c(ms_vect_normal, ms_vect_inverted)
-      hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
-      hexp_df$total[i] <- hexp_total
-      # calculate F_ST as (Ht - Hs) / Ht
-      fst_all$fst[i] <- (hexp_total - av_hexp) / hexp_total
-    }
-    fst_all <- fst_all[fst_all$pos!=INV_START & fst_all$pos!=INV_END-1,]
+    fst_all <- calc_fst_between(ms_normal, ms_inverted)
     
     fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
     fst_windowed_haplotypes_all[repl,] <- fst_windowed[,2]
@@ -595,25 +584,25 @@ if(INVERSION_PRESENT && generation > 5000){
     scale_fill_gradient(low='white', high='blue') +
     ggtitle('F_ST between Haplotypes') + 
     xlab('Position') + ylab(expression(F[ST])) +
-    {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')} +
-    {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue')}
+    gglayer_markers
   
   if(on_cluster){
-    ggsave('fst_haps.png', plot_fst_haplotypes, path=paste("Plots", args[1], args[2], sep="/"))
+    ggsave('fst_haps.png', plot_fst_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
   }else{
-    plot_fst_haplotypes
+    print(plot_fst_haplotypes)
   }
 }
 
 if(on_cluster){
-  ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"))
-  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"))
-  ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"))
-  ggsave('fst_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"))
+  ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+  ggsave('fst_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
 }else{
   # view plots (the ones created with grid.arrange are displayed automatically)
   print(plot_nucdiv_haplotypes)
   print(plot_fst)
 }
 
+ggsave('fst_pops.png', plot_fst, path="C:/Users/tbehr/Desktop", width=8, height=6)
 
