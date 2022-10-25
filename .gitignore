@@ -3,6 +3,7 @@
 
 *.docx
 *.pdf
+*.pptx
 
 /Outputs
 /Plots
