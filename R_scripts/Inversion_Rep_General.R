@@ -24,14 +24,14 @@ INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 WINDOW_SPACING <- 200
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 60
+N_TILES <- 80
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/7000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -113,11 +113,8 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
 # MODIFIED TO REMOVE MARKER MUTATIONS
 get_correlations <- function(msdata, positions, numTiles=20){
   # remove inversion marker mutations
-  inv_start_index_reversed <- which(positions!=INV_START)
-  inv_end_index_reversed <- which(positions!=INV_END-1)
-  not_inv_markers <- intersect(inv_start_index_reversed, inv_end_index_reversed)
-  positions <- positions[not_inv_markers]
-  msdata <- msdata[,not_inv_markers]
+  positions <- positions[! positions %in% c(INV_START, INV_END-1)]
+  msdata <- msdata[, ! positions %in% c(INV_START, INV_END-1)]
   
   # prep storage (with default value of 1 for the diagonal)
   num_sites <- length(positions)
@@ -130,10 +127,7 @@ get_correlations <- function(msdata, positions, numTiles=20){
 reduce_to_long <- function(corrData, positions, numTiles=20){
   # split positions into bins (using range up to full length so replicates can be combined)
   # remove inversion marker mutations
-  inv_start_index <- which(positions!=INV_START)
-  inv_end_index <- which(positions!=INV_END-1)
-  not_inv_markers <- intersect(inv_start_index, inv_end_index)
-  positions <- positions[not_inv_markers]
+  positions <- positions[! positions %in% c(INV_START, INV_END-1)]
   max_pos <- max(positions)
   
   groups <- cut(c(0, positions, GENOME_LENGTH), breaks=numTiles, labels=F)
@@ -151,8 +145,8 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   red_long_empty <- data.frame(Var1=sort(rep(1:numTiles, numTiles)), Var2=rep(1:numTiles, numTiles))
   red_long <- merge(red_long_empty, red_long_incomplete, by=c('Var1', 'Var2'), all=T)
   # scale group numbers to nucleotide positions
-  red_long[1] <- red_long[1] * (max(max_pos)/numTiles)
-  red_long[2] <- red_long[2] * (max(max_pos)/numTiles)
+  red_long[1] <- red_long[1] * (max(GENOME_LENGTH)/numTiles)
+  red_long[2] <- red_long[2] * (max(GENOME_LENGTH)/numTiles)
   #red_long[is.na(red_long)] <- 0                           # does it make sense to fill with zero?????????
   
   return(red_long)
@@ -272,10 +266,9 @@ calc_fst_between <- function(msGroup1, msGroup2){
   return(fst_all)
 }
 
-
-# -------------------------------------------------------------------------------------------
+#-----------------------------------------------------------
 # DATA EXTRACTION
-# -------------------------------------------------------------------------------------------
+#-----------------------------------------------------------
 
 # read in files (values: selection coefficient, migration rate, replicate #)
 files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
@@ -593,6 +586,10 @@ if(INVERSION_PRESENT && generation > 5000){
   }
 }
 
+#-----------------------------------------------------------
+# FINALIZATION - PLOTTING
+#-----------------------------------------------------------
+
 if(on_cluster){
   ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
   ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
@@ -603,6 +600,4 @@ if(on_cluster){
   print(plot_nucdiv_haplotypes)
   print(plot_fst)
 }
-
-ggsave('fst_pops.png', plot_fst, path="C:/Users/tbehr/Desktop", width=8, height=6)
 
