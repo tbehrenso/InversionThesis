@@ -127,8 +127,10 @@ get_correlations <- function(msdata, positions, numTiles=20){
 reduce_to_long <- function(corrData, positions, numTiles=20){
   # split positions into bins (using range up to full length so replicates can be combined)
   # remove inversion marker mutations
-  positions <- positions[! positions %in% c(INV_START, INV_END-1)]
+  positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
   max_pos <- max(positions)
+  
+  corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]  ###### DOESNT WORK??????
   
   groups <- cut(c(0, positions, GENOME_LENGTH), breaks=numTiles, labels=F)
   # associate positions with their groups. Remove first and last group which were only included to specify range
