@@ -1,4 +1,4 @@
-# -----------------------------------------------------
+# -----------------------------------------------------   (probably need to run main script first)
 #    EFFECT OF WINDOW SIZE ON NUCLEOTIDE DIVERSITY
 # -----------------------------------------------------
 
@@ -169,4 +169,6 @@ winpos_both <- data.frame(x=c(nucdiv_df[which(tags_index$population=='p1'),2],nu
 ggplot(winpos_both, aes(x=x, fill=pos)) + geom_histogram(alpha=0.5, position="identity")
 
 
-
+# -----------------------------------------------------
+#    
+# -----------------------------------------------------

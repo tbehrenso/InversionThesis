@@ -120,6 +120,8 @@ get_correlations <- function(msdata, positions, numTiles=20){
   num_sites <- length(positions)
   # use default method (pearson)
   corr_all <- cor(msdata, method="pearson")
+  # taking absolute value of correlation
+  corr_all <- abs(corr_all)
   return(corr_all)
 }
 
