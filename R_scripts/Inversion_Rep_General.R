@@ -24,7 +24,7 @@ INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 WINDOW_SPACING <- 200
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 80
+N_TILES <- 200
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -83,7 +83,7 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
     )  
     ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
     # only do the calculations if more than one position
-    if(dim(ms_in_seq)[2] > 1){
+    if(dim(ms_in_seq)[2] > 0){
       # dist calculates distance between every combination of rows in a matrix. Manhattan method avoids "diagonal" distance
       distances_all <- dist(ms_in_seq, method='manhattan')
       # use this to adjust the sequence length when the window exceeds the range of the genome
@@ -98,6 +98,55 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   }
   return(output)
 }
+
+# adaptation of Kim's SFS code. Currently unused, but adapted in calc_sfs_nucdiv function below
+sfs_nucdiv <- function(){
+  sfs.total <- colSums(ms_binary)
+  # just some line above to get the counts of alleles per site, across all individuals you sample. 
+  
+  p.all <- sfs.total/200 # your sample size is 200
+  q.all <- 1-p.all
+  numerator.all <- 2*p.all*q.all*sfs.total
+  pi.all <- sum(numerator.all)/WINDOW_SIZE*2     # want to divide by all possible sites, not just where SNPs are --- 
+  # you will want to divide by the window size, you could account for windows at
+  # the end by reducing the size there in the calculation
+  
+  return(pi.all)
+}
+
+# alternative function for calculating nucleotide diversity, using site frequency spectrum (SFS)
+cccalc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+  centers <- seq(0, totalLength, by=centerSpacing)
+  # prepare storage for nucleotide diversity at each center position
+  output <- data.frame(position=centers, nuc_div=NA)
+  num_of_seq <- dim(msdata)[1]
+  for(seqCenter in centers){
+    positions_in_sequence <- which(   # select positions within window
+      positions > seqCenter-seqLen & positions <= seqCenter+seqLen & !(positions %in% c(INV_START, INV_END-1))
+    )  
+    ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
+    # only do the calculations if more than one position
+    if(dim(ms_in_seq)[2] > 0){
+      # use this to adjust the sequence length when the window exceeds the range of the genome
+      adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
+      
+      sfs.raw <- colSums(ms_in_seq)
+      sfs.inverse <- num_of_seq - sfs.raw
+      # adjust so it always considers in respect to the less frequent allele
+      sfs.total <- pmin(sfs.raw, sfs.inverse)
+      # just some line above to get the counts of alleles per site, across all individuals you sample. 
+      
+      p.all <- sfs.total/num_of_seq # your sample size is 200
+      q.all <- 1-p.all
+      numerator.all <- 2*p.all*q.all*sfs.total
+      pi.all <- sum(numerator.all)/adjusted_seq_len     # want to divide by all possible sites, not just where SNPs are
+      output[output$position==seqCenter,2] <- pi.all
+    }
+  }
+  return(output)
+}
+
+
 
 # takes a dataframe where first column is position and second column is the value
 calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
@@ -140,6 +189,7 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   
   # convert to long, then convert position indeces to corresponding group numbers
   data_long <- melt(corrData)
+  
   data_long$Var1 <- pos_grouping$group[data_long$Var1]
   data_long$Var2 <- pos_grouping$group[data_long$Var2]
   
@@ -458,6 +508,14 @@ plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=var
   geom_line() +
   ggtitle('Nucleotide Diversity for Different Haplotypes') +
   gglayer_markers
+
+#-----------------------------------------------------------
+# DIVERSITY - ALTERNATIVE (SFS)
+#-----------------------------------------------------------
+
+
+
+
 
 #-----------------------------------------------------------
 # CORRELATION
