@@ -179,7 +179,6 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   # split positions into bins (using range up to full length so replicates can be combined)
   # remove inversion marker mutations
   positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
-  max_pos <- max(positions)
   
   corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]
   
@@ -190,16 +189,16 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   # convert to long, then convert position indeces to corresponding group numbers
   data_long <- melt(corrData)
   
-  #data_long$Var1 <- pos_grouping$group[data_long$Var1]
-  #data_long$Var2 <- pos_grouping$group[data_long$Var2]
+  data_long$Var1 <- pos_grouping$group[data_long$Var1]
+  data_long$Var2 <- pos_grouping$group[data_long$Var2]
   
-  data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
-  data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
+  #data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
+  #data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
   
   # averaging correlations within each combination (i,j) of bins
   red_long_incomplete <- aggregate(value ~ Var1 + Var2, data=data_long, FUN=mean, drop=F, na.rm=T)
-  # dataframe including all possible tile coordinates, to combine with aggregated means
-  red_long_empty <- data.frame(Var1=sort(rep(1:numTiles, numTiles)), Var2=rep(1:numTiles, numTiles))
+  # By chance, some bins may be empty, so dataframe including all possible tile coordinates is combined with aggregated means
+  red_long_empty <- data.frame(Var1=rep(1:numTiles, numTiles), Var2=sort(rep(1:numTiles, numTiles)))
   red_long <- merge(red_long_empty, red_long_incomplete, by=c('Var1', 'Var2'), all=T)
   # scale group numbers to nucleotide positions
   red_long[1] <- red_long[1] * (max(GENOME_LENGTH)/numTiles)

@@ -38,9 +38,9 @@ if(INVERSION_PRESENT && generation > 5000){
     # extract rows based on the presence of both inversion markers
     ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
     ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
-    
-    corr_data_normal <- get_correlations(ms_normal, pos_both, numTiles = N_TILES)
-    corr_data_inverted <- get_correlations(ms_inverted, pos_both, numTiles = N_TILES)
+    # unname here for compatability with reduce_to_long() function
+    corr_data_normal <- unname(get_correlations(ms_normal, pos_both, numTiles = N_TILES))  
+    corr_data_inverted <- unname(get_correlations(ms_inverted, pos_both, numTiles = N_TILES))
     corr_long_normal <- reduce_to_long(corr_data_normal, pos_both, numTiles = N_TILES)
     corr_long_inverted <- reduce_to_long(corr_data_inverted, pos_both, numTiles = N_TILES)
     
@@ -51,14 +51,14 @@ if(INVERSION_PRESENT && generation > 5000){
 }
 
 # correlation heatmap
-corr_summ_p1 <- apply(correlations_3d_normal[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p1 <- apply(correlations_3d_normal, c(1, 2), mean, na.rm = TRUE)
 corr_summ_p1_long <- melt(corr_summ_p1)
 # correct group values to bin centers
 bin_size <- GENOME_LENGTH / N_TILES
 corr_summ_p1_long$Var1 <- corr_summ_p1_long$Var1*bin_size - bin_size/2
 corr_summ_p1_long$Var2 <- corr_summ_p1_long$Var2*bin_size - bin_size/2
 
-corr_summ_p2 <- apply(correlations_3d_inverted[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p2 <- apply(correlations_3d_inverted, c(1, 2), mean, na.rm = TRUE)
 corr_summ_p2_long <- melt(corr_summ_p2)
 # correct group values to bin centers
 bin_size <- GENOME_LENGTH / N_TILES
