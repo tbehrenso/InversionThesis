@@ -11,36 +11,6 @@ correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))
 
 
 
-# correlation heatmap
-corr_summ_p1 <- apply(correlations_3d[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
-corr_summ_p1_long <- melt(corr_summ_p1)
-# correct group values to bin centers
-bin_size <- GENOME_LENGTH / N_TILES
-corr_summ_p1_long$Var1 <- corr_summ_p1_long$Var1*bin_size - bin_size/2
-corr_summ_p1_long$Var2 <- corr_summ_p1_long$Var2*bin_size - bin_size/2
-
-corr_summ_p2 <- apply(correlations_3d[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
-corr_summ_p2_long <- melt(corr_summ_p2)
-# correct group values to bin centers
-bin_size <- GENOME_LENGTH / N_TILES
-corr_summ_p2_long$Var1 <- corr_summ_p2_long$Var1*bin_size - bin_size/2
-corr_summ_p2_long$Var2 <- corr_summ_p2_long$Var2*bin_size - bin_size/2
-
-corr_a <- ggplot(corr_summ_p1_long, aes(x=Var1, y=Var2, fill=value)) +
-  geom_tile() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P1') + xlab('Position') + ylab('Position')
-
-corr_b <- ggplot(corr_summ_p2_long, aes(x=Var1, y=Var2, fill=value)) +
-  geom_tile() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P2') + xlab('Position') + ylab('Position')
-
-plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
-
-
-
-
 if(INVERSION_PRESENT && generation > 5000){
   n_repl <- length(unique(tags_index$repl))
   
@@ -77,10 +47,32 @@ if(INVERSION_PRESENT && generation > 5000){
     correlations_3d_normal[,,repl] <- as.matrix(dcast(corr_long_normal, Var1 ~ Var2)[,-1])
     correlations_3d_inverted[,,repl] <- as.matrix(dcast(corr_long_inverted, Var1 ~ Var2)[,-1])
     
-    
-    
   }
 }
 
+# correlation heatmap
+corr_summ_p1 <- apply(correlations_3d_normal[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p1_long <- melt(corr_summ_p1)
+# correct group values to bin centers
+bin_size <- GENOME_LENGTH / N_TILES
+corr_summ_p1_long$Var1 <- corr_summ_p1_long$Var1*bin_size - bin_size/2
+corr_summ_p1_long$Var2 <- corr_summ_p1_long$Var2*bin_size - bin_size/2
 
+corr_summ_p2 <- apply(correlations_3d_inverted[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p2_long <- melt(corr_summ_p2)
+# correct group values to bin centers
+bin_size <- GENOME_LENGTH / N_TILES
+corr_summ_p2_long$Var1 <- corr_summ_p2_long$Var1*bin_size - bin_size/2
+corr_summ_p2_long$Var2 <- corr_summ_p2_long$Var2*bin_size - bin_size/2
 
+corr_a <- ggplot(corr_summ_p1_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P1') + xlab('Position') + ylab('Position')
+
+corr_b <- ggplot(corr_summ_p2_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P2') + xlab('Position') + ylab('Position')
+
+plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)

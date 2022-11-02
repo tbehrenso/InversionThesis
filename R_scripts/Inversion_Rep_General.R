@@ -72,7 +72,7 @@ calc_hexp <- function(msdata){
 
 # calculating nucleotide diversity. Returns dataframe with nucdiv at spaced positions  --> NOTE: edited to remove marker mutations
 # NOTE: seqLen is only really HALF the window size (adds seqLen in both directions of a point)
-calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+cccalc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
@@ -115,7 +115,7 @@ sfs_nucdiv <- function(){
 }
 
 # alternative function for calculating nucleotide diversity, using site frequency spectrum (SFS)
-cccalc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
@@ -181,28 +181,30 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
   max_pos <- max(positions)
   
-  corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]  ###### DOESNT WORK??????
+  corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]
   
-  groups <- cut(c(0, positions, GENOME_LENGTH), breaks=numTiles, labels=F)
+  groups <- cut(c(0, positions_reduced, GENOME_LENGTH), breaks=numTiles, labels=F)
   # associate positions with their groups. Remove first and last group which were only included to specify range
-  pos_grouping <- data.frame(position=positions, group=groups[-c(1,length(groups))]) 
+  pos_grouping <- data.frame(position=positions_reduced, group=groups[-c(1,length(groups))]) 
   
   # convert to long, then convert position indeces to corresponding group numbers
   data_long <- melt(corrData)
   
-  data_long$Var1 <- pos_grouping$group[data_long$Var1]
-  data_long$Var2 <- pos_grouping$group[data_long$Var2]
+  #data_long$Var1 <- pos_grouping$group[data_long$Var1]
+  #data_long$Var2 <- pos_grouping$group[data_long$Var2]
+  
+  data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
+  data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
   
   # averaging correlations within each combination (i,j) of bins
-  red_long_incomplete <- aggregate(value ~ Var1 + Var2, data=data_long, FUN=mean)
+  red_long_incomplete <- aggregate(value ~ Var1 + Var2, data=data_long, FUN=mean, drop=F, na.rm=T)
   # dataframe including all possible tile coordinates, to combine with aggregated means
   red_long_empty <- data.frame(Var1=sort(rep(1:numTiles, numTiles)), Var2=rep(1:numTiles, numTiles))
   red_long <- merge(red_long_empty, red_long_incomplete, by=c('Var1', 'Var2'), all=T)
   # scale group numbers to nucleotide positions
   red_long[1] <- red_long[1] * (max(GENOME_LENGTH)/numTiles)
   red_long[2] <- red_long[2] * (max(GENOME_LENGTH)/numTiles)
-  #red_long[is.na(red_long)] <- 0                           # does it make sense to fill with zero?????????
-  
+
   return(red_long)
 }
 
