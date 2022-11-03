@@ -72,7 +72,7 @@ calc_hexp <- function(msdata){
 
 # calculating nucleotide diversity. Returns dataframe with nucdiv at spaced positions  --> NOTE: edited to remove marker mutations
 # NOTE: seqLen is only really HALF the window size (adds seqLen in both directions of a point)
-cccalc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
@@ -115,7 +115,7 @@ sfs_nucdiv <- function(){
 }
 
 # alternative function for calculating nucleotide diversity, using site frequency spectrum (SFS)
-calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
@@ -145,7 +145,6 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   }
   return(output)
 }
-
 
 
 # takes a dataframe where first column is position and second column is the value
