@@ -16,17 +16,17 @@ s=0.1
 m=0.001
 mu=1e-5
 nrep=100
-r=1e-6
+rec=1e-6
 
 sim_type=neutral_2pop
-dir_name=${sim_type}_s${s}_m${m}_mu${mu}_r${r}
+dir_name=${sim_type}_s${s}_m${m}_mu${mu}_r${rec}
 
 mkdir Outputs/${dir_name}
 mkdir Outputs/${dir_name}/{5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000}
 
 for r in $(seq 1 $nrep)
 do
-	./slim -d rep=$r -d mu=$mu -d s=$s -d m=$m -d r=$r -d "dir_name='$dir_name'" slim_scripts/${sim_type}.slim
+	./slim -d rep=$r -d mu=$mu -d s=$s -d m=$m -d rec=$rec -d "dir_name='$dir_name'" slim_scripts/${sim_type}.slim
 done
 
 
