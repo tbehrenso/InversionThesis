@@ -2,7 +2,7 @@
 
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4000M
-#SBATCH --time=8:00:00
+#SBATCH --time=3:00:00
 #SBATCH --job-name=R_Plotting
 #SBATCH --output=/data/users/tbehrens/InversionThesis/slim_output/RPlot_%j.o
 #SBATCH --error=/data/users/tbehrens/InversionThesis/errors_slim/error_RPlot_%j.e
@@ -11,13 +11,14 @@
 
 module load R/latest
 
-s=0.01
+s=0.1
 m=0.001
-mu=1e-6
+mu=1e-5
 nrep=100
+r=1e-6
 
-sim_type=locallyAdapted_2pop
-dir_name=${sim_type}_s${s}_m${m}_mu${mu}
+sim_type=neutral_2pop
+dir_name=${sim_type}_s${s}_m${m}_mu${mu}_r${r}
 
 mkdir Plots/${dir_name}
 mkdir Plots/${dir_name}/{5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000}
