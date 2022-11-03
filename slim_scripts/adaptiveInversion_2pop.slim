@@ -6,7 +6,7 @@ initialize() {
 	//defineConstant("s", 0.01);
 	//defineConstant("m", 0.001);
 	//defineConstant("rep", 1);
-	//defineConstant("r", 1e-6);
+	//defineConstant("rec", 1e-6);
 	
 	defineConstant("L", 22000);
 	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
@@ -25,7 +25,7 @@ initialize() {
 	initializeGenomicElementType("g1", m1, 1.0);
 	m1.convertToSubstitution = F;
 	initializeGenomicElement(g1, 0, L-1);
-	initializeRecombinationRate(r);
+	initializeRecombinationRate(rec);
 	
 	m1.mutationStackGroup = -1;   // to make sure separate mutations do not stack at a site
 	m1.mutationStackPolicy = "f";
