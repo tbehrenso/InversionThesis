@@ -1,0 +1,176 @@
+---
+title: "Calculating Differentation - F~ST~"
+author: "Thomas Behrens"
+date: "03/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setting Parameters
+
+Some parameters need to be set manually, including positional information on the inversion and the locally adapted alleles. Here we also set the parameters for the sliding window. Also automatically extract some information found in the directory name.
+
+```{r message=FALSE}
+# determine whether on cluster or local
+on_cluster <- Sys.info()['sysname']=='Linux'
+
+if(on_cluster){
+  # first argument is directory name, second is generation time point
+  args = commandArgs(trailingOnly=TRUE)
+}else{
+  setwd("C:/Users/tbehr/Desktop/Thesis")
+  }
+
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+library(tidyr)
+
+#-----------------------------------------------------------
+# PARAMETERS
+#-----------------------------------------------------------
+
+GENOME_LENGTH <- 22000
+FIXED_MUTATION_POS1 <- 8000
+FIXED_MUTATION_POS2 <- 12000
+INV_START <- 6000
+INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+WINDOW_SPACING <- 200
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
+
+if(on_cluster){
+  PATH <- paste("Outputs", args[1], args[2], sep="/")
+  simtype <- strsplit(args[1], split='_')[[1]][1]
+  generation <- as.integer(args[2])
+}else{
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
+  simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
+  generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
+}
+
+# record presence or absence of inversion and locally adapted alleles
+INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
+LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE, FALSE)
+
+```
+
+## Functions
+
+**get_ms_data** and **get_positions** are used to extract the binary matrix and absolute positions from the raw MS file.
+
+```{r message=FALSE}
+get_ms_data <- function(filename){
+  # read in ms file (ignoring first 3 lines), and as strings
+  ms_binary_conjoined <- read.table(filename, skip = 3, colClasses = 'character')
+  # split each line into its elements as separate columns
+  ms_binary <- apply(ms_binary_conjoined, 1, function(x) as.integer(unlist(strsplit(x,""))))
+  # flip axes so it matches with original file
+  ms_binary <- t(ms_binary)
+  return(ms_binary)
+}
+
+get_positions <- function(filename){
+  # read in third line of text file containing relative positions
+  positions_row <- readLines(filename)[3]
+  relative_positions <- as.numeric(unlist(strsplit(positions_row, " "))[-1])
+  abs_positions <- relative_positions * (GENOME_LENGTH-1)
+  #return(abs_positions)
+  return(round(abs_positions))
+}
+```
+
+### Sliding Window
+
+With combined columns of a given statistic at each position in a particular sample, this function will generalize that data into a constant number of windows (for given window parameters).  
+The centers of these windows are equally spaced, and include both position 0 and the final position (such that half of the first and last windows will extend beyond the ends of the chromosome).  
+For each of these centers, all values for positions within the range of the window size are averaged uniformly, so each window has a single summary statistic (or NA if no positions fall in the window)  
+
+```{r message=FALSE}
+# takes a dataframe where first column is position and second column is the value
+calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
+  centers <- seq(0, totalLength, by=pointSpacing)
+  output <- data.frame(position=centers, average=NA)
+  for(i in 1:length(centers)){
+    correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
+    output[i, 2] <- mean(correspondingValues)
+  }
+  return(output)
+}
+```
+
+### Single F~ST~ Calculation
+
+This function calculates the Fst value between two binary matrices each containing their respective set of positions.These groups represent either different populations or different haplotypes. 
+F~ST~ is calculated as $F_{ST} = \frac{H_T - H_S}{H_T}$ for each position. Heterozygosity is calculated as $H = 2 * p *q$, with H~S~ being the mean heterozygosity between both groups and H~T~ as the total heterozygosity when both groups are combined into *ms_vect_both*.  
+Finally, this function also removes rows that represent inversion breakpoints. 
+
+```{r message=FALSE}
+# calculate differentiation (Fst) between two groups in ms format, with column names of their positions
+# Note: removes inversion markers
+calc_fst_between <- function(msGroup1, msGroup2){
+  # extract positions from column names
+  allPositions <- unique(sort(c(as.integer(colnames(msGroup1)), as.integer(colnames(msGroup2)))))
+  
+  # storage
+  hexp_df <- data.frame(pos=allPositions, group1=numeric(length(allPositions)), 
+                        group2=numeric(length(allPositions)), total=numeric(length(allPositions)))
+  fst_all <- data.frame(pos=allPositions, fst=numeric(length(allPositions)))
+  
+  for(i in 1:length(allPositions)){
+    # extract columns at current positions
+    ms_vect_1 <- msGroup1[ ,as.character(allPositions[i])]
+    ms_vect_2 <- msGroup2[ ,as.character(allPositions[i])]
+    # calc hexp as 2pq
+    hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
+    hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
+    av_hexp <- mean(hexp_df$group1[i], hexp_df$group2[i])
+    # combine ms data to get hexp of total metapopulation
+    ms_vect_both <- c(ms_vect_1, ms_vect_2)
+    hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
+    hexp_df$total[i] <- hexp_total
+    # calculate F_ST as (Ht - Hs) / Ht
+    fst_all$fst[i] <- (hexp_total - av_hexp) / hexp_total
+  }
+  # remove inversion markers
+  fst_all <- fst_all[fst_all$pos!=INV_START & fst_all$pos!=INV_END-1,]
+  return(fst_all)
+}
+```
+
+## Looping over Files
+
+The primary loop in my script loops over each file one at a time, and calculates and stores the given measures and tags. This is to avoid storing the binary matrix for each file. The code below is a subset of that loop that only extracts the tags from the filenames.
+
+``` {r message=TRUE}
+# read in files (values: selection coefficient, migration rate, replicate #)
+files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
+n_files <- length(files)
+
+tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
+                         repl=integer(n_files), stringsAsFactors=F)
+
+for(i in 1:n_files){
+  filepath <- paste0(PATH, "/", files[i])
+  # extract metadata from filename
+  tags <- strsplit(files[i], split='_')[[1]]
+  tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+}
+```
+
+
+However, unlike the other summary statistics, F~ST~ requires two files to be read in at once, and so it is in a separate loop that accesses both files of a replicate at once using the tags stored from the primary loop.
+
+
+
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

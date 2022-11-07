@@ -24,7 +24,7 @@ INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 WINDOW_SPACING <- 200
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 200
+N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -150,7 +150,7 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
 # takes a dataframe where first column is position and second column is the value
 calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
   centers <- seq(0, totalLength, by=pointSpacing)
-  output <- data.frame(position=centers, average=0)
+  output <- data.frame(position=centers, average=NA)
   for(i in 1:length(centers)){
     correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
     output[i, 2] <- mean(correspondingValues)
