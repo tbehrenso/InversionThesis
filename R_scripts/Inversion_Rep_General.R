@@ -40,6 +40,12 @@ if(on_cluster){
 INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
 LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE, FALSE)
 
+# reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
+gglayer_markers <- list(
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
+)
+
 #-----------------------------------------------------------
 # FUNCTIONS
 #-----------------------------------------------------------
@@ -93,6 +99,7 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
       
       
       # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
+      # here using 2x sum of distances_all to account for both parts of the pairwise comparison matrix (above and below the diagonal)
       output[output$position==seqCenter,2] <- (2*sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
     }
   }
@@ -145,7 +152,6 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
   }
   return(output)
 }
-
 
 # takes a dataframe where first column is position and second column is the value
 calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
@@ -389,12 +395,6 @@ nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_d
                              stdev=apply(nucdiv_df[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
 nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p2'),], na.rm=T),
                              stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
-
-# reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
-gglayer_markers <- list(
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
-  )
 
 hexp_a <- ggplot(hexp_summ_p1, aes(x=center, y=hexp)) +
   geom_line() +

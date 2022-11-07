@@ -83,7 +83,7 @@ plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 # -----------------------------------
 #     Testing allele frequency plot
 # -----------------------------------
-PATH <- "Outputs/neutral_2pop_s0.01_m0.001_mu1e-6/10000"
+PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
 simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
 
 INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
@@ -114,7 +114,8 @@ for(i in 1:n_files){
   pos_frequency <- rbind(pos_frequency, pos_frequency_subset)
 }
 
-ggplot(pos_frequency, aes(x=position, y=frequency)) + geom_point(size=0.05) + gglayer_markers
+ggplot(pos_frequency, aes(x=position, y=frequency)) + geom_point(size=0.05) + gglayer_markers +  
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", fx = TRUE, k = 100))
 
 
 

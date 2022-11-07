@@ -1,7 +1,7 @@
 ---
-title: "Calculating Differentation - F~ST~"
+title: "Calculating Measures of Diversity"
 author: "Thomas Behrens"
-date: "03/11/2022"
+date: "07/11/2022"
 output: html_document
 ---
 
@@ -102,42 +102,43 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
 }
 ```
 
-### Single F~ST~ Calculation
+### Single Nucleotide Diversity Calculation
 
-This function calculates the Fst value between two binary matrices each containing their respective set of positions.These groups represent either different populations or different haplotypes. 
-F~ST~ is calculated as $F_{ST} = \frac{H_T - H_S}{H_T}$ for each position. Heterozygosity is calculated as $H = 2 * p *q$, with H~S~ being the mean heterozygosity between both groups and H~T~ as the total heterozygosity when both groups are combined into *ms_vect_both*.  
-Finally, this function also removes rows that represent inversion breakpoints. 
+Because nucleotide diversity is calculated across a sequence rather than at each position separately, the function below will already create the sliding windows.  
+It begins by calculating the window centers, which include the first and last positions of the chromosome, to then loop over. At each of these centers, it is determined which positions fall within its window, and these rows and then extracted into the *ms_in_seq* matrix.  
+So long as there is at least one column in a window, I used the **dist()** function which will return a dist object which contains the pairwise distances between all rows. The Manhattan method ensures that this distance is computed in a way that doesn't use "diagonal distance". The sum of this matrix gives the total number of differences between all pairwise comparisons, which is doubled to include values both above and below the diagonal.  
+I use *adjusted_seq_len* because the sequences at the first and last positions will be roughly half as large as all other sequences given that they will extend outside the range of the genome. I wrote it in a way that should be flexible for different window sizes and spacing.  
+Finally, the nucleotide diversity at a given center is calculated as the $\frac{\sum{p_{ij}} / |p_{ij}|}{seqlength}$ in which p~ij~ is the number of pairwise comparisons between sequence i and j, and |p~ij~| is the total number of pairwise comparisons.  
 
 ```{r message=FALSE}
-# calculate differentiation (Fst) between two groups in ms format, with column names of their positions
-# Note: removes inversion markers
-calc_fst_between <- function(msGroup1, msGroup2){
-  # extract positions from column names
-  allPositions <- unique(sort(c(as.integer(colnames(msGroup1)), as.integer(colnames(msGroup2)))))
-  
-  # storage
-  hexp_df <- data.frame(pos=allPositions, group1=numeric(length(allPositions)), 
-                        group2=numeric(length(allPositions)), total=numeric(length(allPositions)))
-  fst_all <- data.frame(pos=allPositions, fst=numeric(length(allPositions)))
-  
-  for(i in 1:length(allPositions)){
-    # extract columns at current positions
-    ms_vect_1 <- msGroup1[ ,as.character(allPositions[i])]
-    ms_vect_2 <- msGroup2[ ,as.character(allPositions[i])]
-    # calc hexp as 2pq
-    hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
-    hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
-    av_hexp <- mean(hexp_df$group1[i], hexp_df$group2[i])
-    # combine ms data to get hexp of total metapopulation
-    ms_vect_both <- c(ms_vect_1, ms_vect_2)
-    hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
-    hexp_df$total[i] <- hexp_total
-    # calculate F_ST as (Ht - Hs) / Ht
-    fst_all$fst[i] <- (hexp_total - av_hexp) / hexp_total
+# calculating nucleotide diversity. Returns dataframe with nucdiv at spaced positions  --> NOTE: edited to remove marker mutations
+# NOTE: seqLen is only really HALF the window size (adds seqLen in both directions of a point)
+calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+  centers <- seq(0, totalLength, by=centerSpacing)
+  # prepare storage for nucleotide diversity at each center position
+  output <- data.frame(position=centers, nuc_div=NA)
+  num_of_seq <- dim(msdata)[1]
+  for(seqCenter in centers){
+    positions_in_sequence <- which(   # select positions within window
+      positions > seqCenter-seqLen & positions <= seqCenter+seqLen & !(positions %in% c(INV_START, INV_END-1))
+    )  
+    ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
+    # only do the calculations if more than one position
+    if(dim(ms_in_seq)[2] > 0){
+      # dist calculates distance between every combination of rows in a matrix. Manhattan method avoids "diagonal" distance
+      distances_all <- dist(ms_in_seq, method='manhattan')
+      # use this to adjust the sequence length when the window exceeds the range of the genome
+      adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
+      # at a given position (center), nucdiv is the average number of differences divided by the length of the sequence window
+      # Note: average number of differences is the total number of pairwise differences / the number of pairwise difference nChoosek
+      
+      
+      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
+      # here using 2x sum of distances_all to account for both parts of the pairwise comparison matrix (above and below the diagonal)
+      output[output$position==seqCenter,2] <- (2*sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
+    }
   }
-  # remove inversion markers
-  fst_all <- fst_all[fst_all$pos!=INV_START & fst_all$pos!=INV_END-1,]
-  return(fst_all)
+  return(output)
 }
 ```
 
@@ -162,70 +163,14 @@ for(i in 1:n_files){
 }
 ```
 
-However, unlike the other summary statistics, F~ST~ requires two files to be read in at once, and so it is in a separate loop that accesses both files of a replicate at once using the tags stored from the primary loop. The code for calculating differentiation between populations and between haplotypes is identical, except for the condition by which the data is separated after being combined into *ms_both*, with any missing positions in either populations being filled with zeroes (which represents that derived allele being completely absent from that population).  
-
-``` {r message=TRUE}
-# storage of Fst across sliding windows
-n_repl <- length(unique(tags_index$repl))
-fst_windowed_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
-
-for(repl in 1:max(tags_index$repl)){
-  # get and prepare ms_data
-  filepath_p1 <- paste0(PATH, "/", files[which(tags_index$population=='p1' & tags_index$repl==repl)])
-  filepath_p2 <- paste0(PATH, "/", files[which(tags_index$population=='p2' & tags_index$repl==repl)])
-  ms_p1 <- get_ms_data(filepath_p1)
-  ms_p2 <- get_ms_data(filepath_p2)
-  pos_p1 <- get_positions(filepath_p1)
-  pos_p2 <- get_positions(filepath_p2)
-  pos_both <- unique(sort(c(pos_p1, pos_p2)))
-  colnames(ms_p1) <- pos_p1
-  colnames(ms_p2) <- pos_p2
-  n_indiv <- dim(ms_p1)[1]
-  
-  #### IGNORING IF IT IS MISSING IN ONE POP OR THE OTHER ####
-  #pos_both <- intersect(pos_p1, pos_p2)
-  
-  ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
-  colnames(ms_both) <- pos_both
-  # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
-  ms_both[1:200,as.character(pos_p1)] <- ms_p1
-  ms_both[201:400,as.character(pos_p2)] <- ms_p2
-  # extract rows again (so ms_p1 and ms_p2 now have all positions, with missing positions filled with zeros)
-  ms_p1 <- ms_both[1:200,]
-  ms_p2 <- ms_both[201:400,]
-  
-  fst_all <- calc_fst_between(ms_p1, ms_p2)
-
-  fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
-  fst_windowed_all[repl,] <- fst_windowed[,2]
-}
-
-fst_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_all, na.rm = T), 
-                          stdev=apply(fst_windowed_all, 2, sd, na.rm=T))
 
 
-fst_average[1:10,]
-
-```
 
 ## Result
 
-The final result is a dataframe containing the average F~ST~ within each window, which can be directly plotted as a line graph:
+
 
 ```{r plotting, echo=FALSE}
-LAA_PRESENT <- T
-INVERSION_PRESENT <- T
 
-gglayer_markers <- list(
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
-  )
-
-ggplot(fst_average, aes(x=pos, y=av_fst)) +
-  geom_line() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('F_ST between Populations') + 
-  xlab('Position') + ylab(expression(F[ST])) +
-  gglayer_markers
 ```
 
