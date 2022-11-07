@@ -333,6 +333,7 @@ window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 # STORAGE DATAFRAMES
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
+pos_frequency <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("pop", "position", "frequency"))
 hexp_red_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 nucdiv_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 frequencies <- matrix(0, nrow=n_files, ncol=length(window_centers))
@@ -346,6 +347,10 @@ for(i in 1:n_files){
   # extract metadata from filename
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+  # get allele frequencies at all positions
+  pos_frequency_subset <- data.frame(pop=tags[2], position=abs_positions, frequency=colMeans(ms_binary))
+  pos_frequency <- rbind(pos_frequency, pos_frequency_subset)
   
   # calc hexp at each position, and then a sliding window across the genome
   exp_het <- calc_hexp(ms_binary)
