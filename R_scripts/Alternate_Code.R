@@ -170,5 +170,42 @@ ggplot(winpos_both, aes(x=x, fill=pos)) + geom_histogram(alpha=0.5, position="id
 
 
 # -----------------------------------------------------
-#    
+#     Testing allele frequency plot
+# -----------------------------------------------------
+PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
+simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
+
+INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
+LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE, FALSE)
+
+
+# read in files (values: selection coefficient, migration rate, replicate #)
+files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
+n_files <- length(files)
+# pre-calculate window centers' positions
+window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
+
+# STORAGE DATAFRAMES
+tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
+                         repl=integer(n_files), stringsAsFactors=F)
+pos_frequency <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("pop", "position", "frequency"))
+
+for(i in 1:n_files){
+  filepath <- paste0(PATH, "/", files[i])
+  ms_binary <- get_ms_data(filepath)
+  abs_positions <- get_positions(filepath)
+  # extract metadata from filename
+  tags <- strsplit(files[i], split='_')[[1]]
+  tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+  # get allele frequencies at all positions
+  pos_frequency_subset <- data.frame(pop=tags[2], position=abs_positions, frequency=colMeans(ms_binary))
+  pos_frequency <- rbind(pos_frequency, pos_frequency_subset)
+}
+
+ggplot(pos_frequency, aes(x=position, y=frequency)) + geom_point(size=0.05) + gglayer_markers +  
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", fx = TRUE, k = 100))
+
+# -----------------------------------------------------
+#     
 # -----------------------------------------------------

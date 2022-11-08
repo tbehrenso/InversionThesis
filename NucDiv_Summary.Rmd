@@ -157,9 +157,7 @@ for(i in 1:n_files){
 }
 ```
 
-### 
-
-All that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
+After the loop, all that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
 
 ``` {r message=TRUE}
 nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p1'),], na.rm=T),
@@ -190,7 +188,7 @@ grid.arrange(nucdiv_a, nucdiv_b, nrow=1)
 
 ## Separating by Population and Haplotype
 
-
+Separating by haplotype 
 
 ```{r haplosep}
 nucdiv_inverted <- matrix(0, nrow=n_files, ncol=length(window_centers))
@@ -205,34 +203,34 @@ for(i in 1:n_files){
     inv_start_index <- which(abs_positions==INV_START)
     inv_end_index <- which(abs_positions==INV_END-1)
     
+    # Fix for multiple mutations at a site
+    if(length(inv_start_index)>1 && length(inv_end_index)>1){
+      # if both indeces are duplicated, need to find the pair of columns that are identical
+      comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+      if(length(comparison_a)==0){
+        # if no columns are the same, then flip one of the matrices for the other two comparisons
+        inv_start_index <- inv_start_index[c(2,1)]
+      }
+      inv_start_index <- inv_start_index[comparison_a[1]]  # this last index is in case all columns are identical
+      inv_end_index <- inv_end_index[comparison_a[1]]
+      
+    } else if(length(inv_start_index)>1){
+      # if only one index is duplicated, pick the index that is identical to the ms of the single index
+      # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+      # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+      inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+    } else if(length(inv_end_index)>1){
+      # same as previous else if, but if the end breakpoint is duplicated
+      inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+    }
+    
+    # extract ms rows based on presence of inversion markers
     ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
     ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 & ms_binary[,inv_end_index]!=1,]
+
+    ms_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    ms_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
     
-    # account for if only one individual is inverted/normal (in which case cannot calculate nucleotide diversity)
-    if(is.null(dim(ms_inverted))){    # NOTE: This part is a mess right now. 
-      nucdiv_inverted[i,] <- NA
-      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
-    } else if(is.null(dim(ms_normal))){
-      nucdiv_normal[i,] <- NA
-      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
-    } else if (dim(ms_inverted)[1] == 0 ){
-      nucdiv_inverted[i,] <- NA
-      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
-    } else if (dim(ms_inverted)[1] == 0){
-      nucdiv_normal[i,] <- NA
-      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
-    }else {
-      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      
-      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
-      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
-    }
-    # if no individual has the inversion (hence markers not in list of positions)
   } else {
     ms_normal <- ms_binary
     nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
@@ -242,6 +240,12 @@ for(i in 1:n_files){
   }
 }
 
+
+```
+
+Once separated by haplotype, these are further separated by population using the tags indeces (as each row of the *nucdiv_inverted* and *nucdiv_normal* dataframes each represent only output file, and hence only one population)
+
+``` {r popsep}
 nucdiv_inverted_summ_p1 <- data.frame(center = window_centers, 
                                       nucdiv = colMeans(nucdiv_inverted[which(tags_index$population=='p1'),], na.rm=T),
                                       stdev = apply(nucdiv_inverted[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
@@ -254,5 +258,29 @@ nucdiv_normal_summ_p1 <- data.frame(center = window_centers,
 nucdiv_normal_summ_p2 <- data.frame(center = window_centers, 
                                     nucdiv = colMeans(nucdiv_normal[which(tags_index$population=='p2'),], na.rm=T),
                                     stdev = apply(nucdiv_normal[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
+```
+
+Aaaand plot.
+
+```{r happlot, echo=FALSE}
+
+# compile into one data frame
+if(INVERSION_PRESENT){
+  nucdiv_all <- cbind(nucdiv_inverted_summ_p1$center, nucdiv_inverted_summ_p1$nucdiv, nucdiv_inverted_summ_p2$nucdiv, nucdiv_normal_summ_p1$nucdiv, nucdiv_normal_summ_p2$nucdiv)
+  nucdiv_all <- as.data.frame(nucdiv_all)
+  names(nucdiv_all) <- c('center', 'inv_P1', 'inv_P2', 'nor_P1', 'nor_P2')
+  # exclude empty inverted columns if no inversion present
+}else{
+  nucdiv_all <- cbind(nucdiv_inverted_summ_p1$center, nucdiv_normal_summ_p1$nucdiv, nucdiv_normal_summ_p2$nucdiv)
+  nucdiv_all <- as.data.frame(nucdiv_all)
+  names(nucdiv_all) <- c('center', 'nor_P1', 'nor_P2')
+}
+
+nucdiv_all_long <- melt(nucdiv_all, id='center')
+
+ggplot(nucdiv_all_long, aes(x=center, y=value, col=variable)) +
+  geom_line() +
+  ggtitle('Nucleotide Diversity for Different Haplotypes') +
+  gglayer_markers
 ```
 
