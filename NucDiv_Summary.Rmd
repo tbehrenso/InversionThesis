@@ -56,6 +56,11 @@ if(on_cluster){
 INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
 LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE, FALSE)
 
+# reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
+gglayer_markers <- list(
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
+)
 ```
 
 ## Functions
@@ -80,25 +85,6 @@ get_positions <- function(filename){
   abs_positions <- relative_positions * (GENOME_LENGTH-1)
   #return(abs_positions)
   return(round(abs_positions))
-}
-```
-
-### Sliding Window
-
-With combined columns of a given statistic at each position in a particular sample, this function will generalize that data into a constant number of windows (for given window parameters).  
-The centers of these windows are equally spaced, and include both position 0 and the final position (such that half of the first and last windows will extend beyond the ends of the chromosome).  
-For each of these centers, all values for positions within the range of the window size are averaged uniformly, so each window has a single summary statistic (or NA if no positions fall in the window)  
-
-```{r message=FALSE}
-# takes a dataframe where first column is position and second column is the value
-calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
-  centers <- seq(0, totalLength, by=pointSpacing)
-  output <- data.frame(position=centers, average=NA)
-  for(i in 1:length(centers)){
-    correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
-    output[i, 2] <- mean(correspondingValues)
-  }
-  return(output)
 }
 ```
 
@@ -142,9 +128,10 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
 }
 ```
 
-## Looping over Files
+## Separated by Population Only
 
-The primary loop in my script loops over each file one at a time, and calculates and stores the given measures and tags. This is to avoid storing the binary matrix for each file. The code below is a subset of that loop that only extracts the tags from the filenames.
+The primary loop in my script loops over each file one at a time, and calculates and stores the given measures and tags. This is to avoid storing the binary matrix for each file.  
+It also includes the calculation of nucleotide diversity for each output file (each of which belongs to either population 1 or population 2).  
 
 ``` {r message=TRUE}
 # read in files (values: selection coefficient, migration rate, replicate #)
@@ -154,23 +141,118 @@ n_files <- length(files)
 window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
+nucdiv_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 
 for(i in 1:n_files){
   filepath <- paste0(PATH, "/", files[i])
+  ms_binary <- get_ms_data(filepath)
+  abs_positions <- get_positions(filepath)
   # extract metadata from filename
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+    # calc nucleotide diversity (over sliding window by default)
+  nucdiv_windowed <- calc_nuc_div(ms_binary, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+  nucdiv_df[i,] <- nucdiv_windowed[[2]]
 }
 ```
 
+### 
+
+All that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
+
+``` {r message=TRUE}
+nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p1'),], na.rm=T),
+                             stdev=apply(nucdiv_df[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
+nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p2'),], na.rm=T),
+                             stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
+
+nucdiv_a <- ggplot(nucdiv_summ_p1, aes(x=center, y=nucdiv)) +
+  geom_line() +
+  scale_color_brewer(palette="Dark2")+
+  ggtitle('c) Nucleotide Diversity - P1') +
+  gglayer_markers +
+  xlab('Position') + ylab('\u03c0')
+#ylim(c(0.0014, 0.0029))
+
+nucdiv_b <- ggplot(nucdiv_summ_p2, aes(x=center, y=nucdiv)) +
+  geom_line() +
+  scale_color_brewer(palette="Dark2")+
+  ggtitle('d) Nucleotide Diversity - P2') +
+  gglayer_markers +
+  #geom_errorbar(aes(ymin=nucdiv-stdev, ymax=nucdiv+stdev), width=1, position=position_dodge(0.1)) +
+  xlab('Position') + ylab('\u03c0')
+#ylim(c(0.0014, 0.0029))
+
+grid.arrange(nucdiv_a, nucdiv_b, nrow=1)
+```
+
+
+## Separating by Population and Haplotype
 
 
 
-## Result
+```{r haplosep}
+nucdiv_inverted <- matrix(0, nrow=n_files, ncol=length(window_centers))
+nucdiv_normal <- matrix(0, nrow=n_files, ncol=length(window_centers))
 
+for(i in 1:n_files){
+  filepath <- paste0(PATH, "/", files[i])
+  ms_binary <- get_ms_data(filepath)
+  abs_positions <- get_positions(filepath)
+  # if at least one sample individual has the inversion
+  if(all(c(INV_START, INV_END-1) %in% abs_positions)){
+    inv_start_index <- which(abs_positions==INV_START)
+    inv_end_index <- which(abs_positions==INV_END-1)
+    
+    ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
+    ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 & ms_binary[,inv_end_index]!=1,]
+    
+    # account for if only one individual is inverted/normal (in which case cannot calculate nucleotide diversity)
+    if(is.null(dim(ms_inverted))){    # NOTE: This part is a mess right now. 
+      nucdiv_inverted[i,] <- NA
+      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
+    } else if(is.null(dim(ms_normal))){
+      nucdiv_normal[i,] <- NA
+      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
+    } else if (dim(ms_inverted)[1] == 0 ){
+      nucdiv_inverted[i,] <- NA
+      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
+    } else if (dim(ms_inverted)[1] == 0){
+      nucdiv_normal[i,] <- NA
+      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
+    }else {
+      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+      
+      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
+      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
+    }
+    # if no individual has the inversion (hence markers not in list of positions)
+  } else {
+    ms_normal <- ms_binary
+    nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
+    
+    nucdiv_inverted[i,] <- NA
+  }
+}
 
-
-```{r plotting, echo=FALSE}
-
+nucdiv_inverted_summ_p1 <- data.frame(center = window_centers, 
+                                      nucdiv = colMeans(nucdiv_inverted[which(tags_index$population=='p1'),], na.rm=T),
+                                      stdev = apply(nucdiv_inverted[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
+nucdiv_inverted_summ_p2 <- data.frame(center = window_centers, 
+                                      nucdiv = colMeans(nucdiv_inverted[which(tags_index$population=='p2'),], na.rm=T),
+                                      stdev = apply(nucdiv_inverted[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
+nucdiv_normal_summ_p1 <- data.frame(center = window_centers, 
+                                    nucdiv = colMeans(nucdiv_normal[which(tags_index$population=='p1'),], na.rm=T),
+                                    stdev = apply(nucdiv_normal[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
+nucdiv_normal_summ_p2 <- data.frame(center = window_centers, 
+                                    nucdiv = colMeans(nucdiv_normal[which(tags_index$population=='p2'),], na.rm=T),
+                                    stdev = apply(nucdiv_normal[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
 ```
 

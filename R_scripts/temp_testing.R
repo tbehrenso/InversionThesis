@@ -118,7 +118,3 @@ ggplot(pos_frequency, aes(x=position, y=frequency)) + geom_point(size=0.05) + gg
   geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", fx = TRUE, k = 100))
 
 
-
-
-
-

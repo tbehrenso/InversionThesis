@@ -431,7 +431,8 @@ nucdiv_b <- ggplot(nucdiv_summ_p2, aes(x=center, y=nucdiv)) +
 
 plot_nucdiv_hexp <- grid.arrange(hexp_a, hexp_b, nucdiv_a, nucdiv_b, nrow=2)
 
-# nucleotide diversity - separating haplotypes
+######  nucleotide diversity - separating haplotypes #######
+
 nucdiv_inverted <- matrix(0, nrow=n_files, ncol=length(window_centers))
 nucdiv_normal <- matrix(0, nrow=n_files, ncol=length(window_centers))
 
@@ -442,38 +443,36 @@ for(i in 1:n_files){
   # if at least one sample individual has the inversion
   if(all(c(INV_START, INV_END-1) %in% abs_positions)){
     inv_start_index <- which(abs_positions==INV_START)
-    inv_start_index <- inv_start_index[1] ##### TEMPORARY: TO "FIX" MULTIPLE MUTATIONS AT A SITE
     inv_end_index <- which(abs_positions==INV_END-1)
-    inv_end_index <- inv_end_index[1]  ##### TEMPORARY: TO "FIX" MULTIPLE MUTATIONS AT A SITE
     
+    # Fix for multiple mutations at a site
+    if(length(inv_start_index)>1 && length(inv_end_index)>1){
+      # if both indeces are duplicated, need to find the pair of columns that are identical
+      comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+      if(length(comparison_a)==0){
+        # if no columns are the same, then flip one of the matrices for the other two comparisons
+        inv_start_index <- inv_start_index[c(2,1)]
+      }
+      inv_start_index <- inv_start_index[comparison_a[1]]  # this last index is in case all columns are identical
+      inv_end_index <- inv_end_index[comparison_a[1]]
+      
+    } else if(length(inv_start_index)>1){
+      # if only one index is duplicated, pick the index that is identical to the ms of the single index
+      # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+      # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+      inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+    } else if(length(inv_end_index)>1){
+      # same as previous else if, but if the end breakpoint is duplicated
+      inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+    }
+    
+    # extract ms rows based on presence of inversion markers
     ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
     ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 & ms_binary[,inv_end_index]!=1,]
+
+    ms_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    ms_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
     
-    # account for if only one individual is inverted/normal (in which case cannot calculate nucleotide diversity)
-    if(is.null(dim(ms_inverted))){    # NOTE: This part is a mess right now. 
-      nucdiv_inverted[i,] <- NA
-      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
-    } else if(is.null(dim(ms_normal))){
-      nucdiv_normal[i,] <- NA
-      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
-    } else if (dim(ms_inverted)[1] == 0 ){
-      nucdiv_inverted[i,] <- NA
-      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
-    } else if (dim(ms_inverted)[1] == 0){
-      nucdiv_normal[i,] <- NA
-      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
-    }else {
-      nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-      
-      nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
-      nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
-    }
-    # if no individual has the inversion (hence markers not in list of positions)
   } else {
     ms_normal <- ms_binary
     nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
