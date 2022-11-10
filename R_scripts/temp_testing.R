@@ -84,7 +84,7 @@ plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 #     Comparing original and SFS nucdiv functions
 # -----------------------------------
 
-positions_test <- c(1,5,10,15,20,25)
+positions_test <- c(1,6,11,16,21,26)
 
 ms_test <- matrix(c(0,0,0,0,1,0,
                     0,1,0,0,1,1,
@@ -93,7 +93,16 @@ ms_test <- matrix(c(0,0,0,0,1,0,
                     0,1,1,0,1,0,
                     0,0,0,1,0,1), nrow = 6, byrow = T)
 
-ms_test_long <- rbind(ms_test, ms_test, ms_test)
+ms_test_long <- rbind(ms_test, ms_test, ms_test, ms_test, ms_test, ms_test)
+
+
+positions_test_addedzeros <- c(1,6,11,16,21,25,26)
+ms_test_addedzeros <- matrix(c(0,0,0,0,1,0,0,
+                               0,1,0,0,1,0,1,
+                               0,1,0,1,1,0,0,
+                               1,0,0,1,1,0,1,
+                               0,1,1,0,1,0,0,
+                               0,0,0,1,0,0,1), nrow = 6, byrow = T)
 
 calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
   centers <- seq(0, totalLength, by=centerSpacing)
@@ -102,8 +111,9 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   num_of_seq <- dim(msdata)[1]
   for(seqCenter in centers){
     positions_in_sequence <- which(   # select positions within window
-      positions > seqCenter-seqLen & positions <= seqCenter+seqLen & !(positions %in% c(INV_START, INV_END-1))
-    )  
+      positions > seqCenter-seqLen & positions <= seqCenter+seqLen
+    ) 
+    print(positions_in_sequence)
     ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
     # only do the calculations if more than one position
     if(dim(ms_in_seq)[2] > 0){
@@ -121,7 +131,6 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   }
   return(output)
 }
-
 calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
@@ -129,7 +138,7 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
   num_of_seq <- dim(msdata)[1]
   for(seqCenter in centers){
     positions_in_sequence <- which(   # select positions within window
-      positions > seqCenter-seqLen & positions <= seqCenter+seqLen & !(positions %in% c(INV_START, INV_END-1))
+      positions > seqCenter-seqLen & positions <= seqCenter+seqLen
     )  
     ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
     # only do the calculations if more than one position
@@ -137,14 +146,17 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
       # use this to adjust the sequence length when the window exceeds the range of the genome
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       
-      sfs.raw <- colSums(ms_in_seq)
-      #sfs.inverse <- num_of_seq - sfs.raw
-      # adjust so it always considers in respect to the less frequent allele
-      #sfs.total <- pmin(sfs.raw, sfs.inverse)
-      # just some line above to get the counts of alleles per site, across all individuals you sample. 
+      sfs.raw <- table(colSums(ms_in_seq))
+
+      # alternate to adjust so it always considers in respect to the less frequent allele
+      # sfs.inverse <- num_of_seq - sfs.raw
+      # sfs.total <- pmin(sfs.raw, sfs.inverse)
+      
       sfs.total <- sfs.raw
       
-      p.all <- sfs.total/num_of_seq # your sample size is 200
+      counts.sfs.total <- as.numeric(names(sfs.total))
+      
+      p.all <- counts.sfs.total/num_of_seq # your sample size is 200
       q.all <- 1-p.all
       numerator.all <- 2*p.all*q.all*sfs.total
       pi.all <- sum(numerator.all)/adjusted_seq_len     # want to divide by all possible sites, not just where SNPs are
@@ -153,7 +165,52 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
   }
   return(output)
 }
+calc_nuc_div_popgenome <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+  centers <- seq(0, totalLength, by=centerSpacing)
+  # prepare storage for nucleotide diversity at each center position
+  output <- data.frame(position=centers, nuc_div=NA)
+  num_of_seq <- dim(msdata)[1]
+  for(seqCenter in centers){
+    positions_in_sequence <- which(   # select positions within window
+      positions > seqCenter-seqLen & positions <= seqCenter+seqLen
+    )  
+    ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
+    # only do the calculations if more than one position
+    if(dim(ms_in_seq)[2] > 0){
+      ones <- colSums(ms_in_seq)
+      zeros <- num_of_seq - ones
+      n.comparisons <- (num_of_seq * (num_of_seq-1)) / 2
+      nuc_div_all <- (ones * zeros) / n.comparisons
+      nuc_div_mean <- mean(nuc_div_all)
+      
+      output[output$position==seqCenter,2] <- nuc_div_mean
+    }
+  }
+  return(output)
+}
 
-calc_nuc_div(ms_test_long, positions_test, totalLength=26, seqLen=6,centerSpacing=10)
+# testing on default version
+calc_nuc_div(ms_test, positions_test, totalLength=26, seqLen=7,centerSpacing=7)
+calc_nuc_div_sfs(ms_test, positions_test, totalLength=26, seqLen=7,centerSpacing=7)
+calc_nuc_div_popgenome(ms_test, positions_test, totalLength=26, seqLen=7,centerSpacing=7)
 
-calc_nuc_div_sfs(ms_test_long, positions_test, totalLength=26, seqLen=6,centerSpacing=10)
+# testing on longer version (more samples)
+calc_nuc_div(ms_test_long, positions_test, totalLength=26, seqLen=7,centerSpacing=7)
+calc_nuc_div_sfs(ms_test_long, positions_test, totalLength=26, seqLen=7,centerSpacing=7)
+calc_nuc_div_popgenome(ms_test_long, positions_test, totalLength=26, seqLen=7,centerSpacing=7)
+
+# testing with smaller window (and hence more windows)
+calc_nuc_div(ms_test, positions_test, totalLength=26, seqLen=5,centerSpacing=5)
+calc_nuc_div_sfs(ms_test, positions_test, totalLength=26, seqLen=5,centerSpacing=5)
+calc_nuc_div_popgenome(ms_test, positions_test, totalLength=26, seqLen=5,centerSpacing=5)
+
+# testing on version with a row of zeros in final window
+calc_nuc_div(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqLen=7,centerSpacing=7)
+calc_nuc_div_sfs(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqLen=7,centerSpacing=7)
+calc_nuc_div_popgenome(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqLen=7,centerSpacing=7)
+
+
+
+
+
+

@@ -95,30 +95,14 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
       # use this to adjust the sequence length when the window exceeds the range of the genome
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       # at a given position (center), nucdiv is the average number of differences divided by the length of the sequence window
-      # Note: average number of differences is the total number of pairwise differences / the number of pairwise difference nChoosek
-      
-      
-      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
       # here using 2x sum of distances_all to account for both parts of the pairwise comparison matrix (above and below the diagonal)
       output[output$position==seqCenter,2] <- (2*sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
+      
+      # slightly different calculation which ignores comparisons along diagonal
+      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
     }
   }
   return(output)
-}
-
-# adaptation of Kim's SFS code. Currently unused, but adapted in calc_sfs_nucdiv function below
-sfs_nucdiv <- function(){
-  sfs.total <- colSums(ms_binary)
-  # just some line above to get the counts of alleles per site, across all individuals you sample. 
-  
-  p.all <- sfs.total/200 # your sample size is 200
-  q.all <- 1-p.all
-  numerator.all <- 2*p.all*q.all*sfs.total
-  pi.all <- sum(numerator.all)/WINDOW_SIZE*2     # want to divide by all possible sites, not just where SNPs are --- 
-  # you will want to divide by the window size, you could account for windows at
-  # the end by reducing the size there in the calculation
-  
-  return(pi.all)
 }
 
 # alternative function for calculating nucleotide diversity, using site frequency spectrum (SFS)
@@ -137,14 +121,17 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
       # use this to adjust the sequence length when the window exceeds the range of the genome
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       
-      sfs.raw <- colSums(ms_in_seq)
+      sfs.raw <- table(colSums(ms_in_seq))
+      
+      # alternate to adjust so it always considers in respect to the less frequent allele
       #sfs.inverse <- num_of_seq - sfs.raw
-      # adjust so it always considers in respect to the less frequent allele
       #sfs.total <- pmin(sfs.raw, sfs.inverse)
-      # just some line above to get the counts of alleles per site, across all individuals you sample. 
+
       sfs.total <- sfs.raw
       
-      p.all <- sfs.total/num_of_seq # your sample size is 200
+      counts.sfs.total <- as.numeric(names(sfs.total))
+      
+      p.all <- counts.sfs.total/num_of_seq # your sample size is 200
       q.all <- 1-p.all
       numerator.all <- 2*p.all*q.all*sfs.total
       pi.all <- sum(numerator.all)/adjusted_seq_len     # want to divide by all possible sites, not just where SNPs are
@@ -153,6 +140,33 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
   }
   return(output)
 }
+
+# calculating nucleotide diversity using the method in PopGenome package
+# calculates nucdiv PER SITE first, and then averages those values across each window
+calc_nuc_div_popgenome <- function(msdata, positions, totalLength, seqLen=200, centerSpacing=100){
+  centers <- seq(0, totalLength, by=centerSpacing)
+  # prepare storage for nucleotide diversity at each center position
+  output <- data.frame(position=centers, nuc_div=NA)
+  num_of_seq <- dim(msdata)[1]
+  for(seqCenter in centers){
+    positions_in_sequence <- which(   # select positions within window
+      positions > seqCenter-seqLen & positions <= seqCenter+seqLen & !(positions %in% c(INV_START, INV_END-1))
+    )  
+    ms_in_seq <- as.matrix(msdata[,positions_in_sequence])
+    # only do the calculations if more than one position
+    if(dim(ms_in_seq)[2] > 0){
+      ones <- colSums(ms_in_seq)
+      zeros <- num_of_seq - ones
+      n.comparisons <- (num_of_seq * (num_of_seq-1)) / 2
+      nuc_div_all <- (ones * zeros) / n.comparisons
+      nuc_div_mean <- mean(nuc_div_all)
+      
+      output[output$position==seqCenter,2] <- nuc_div_mean
+    }
+  }
+  return(output)
+}
+
 
 # takes a dataframe where first column is position and second column is the value
 calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
