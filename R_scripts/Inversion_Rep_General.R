@@ -22,7 +22,7 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 200
+WINDOW_SPACING <- 100
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
@@ -138,10 +138,11 @@ calc_nuc_div_sfs <- function(msdata, positions, totalLength, seqLen=200, centerS
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       
       sfs.raw <- colSums(ms_in_seq)
-      sfs.inverse <- num_of_seq - sfs.raw
+      #sfs.inverse <- num_of_seq - sfs.raw
       # adjust so it always considers in respect to the less frequent allele
-      sfs.total <- pmin(sfs.raw, sfs.inverse)
+      #sfs.total <- pmin(sfs.raw, sfs.inverse)
       # just some line above to get the counts of alleles per site, across all individuals you sample. 
+      sfs.total <- sfs.raw
       
       p.all <- sfs.total/num_of_seq # your sample size is 200
       q.all <- 1-p.all
@@ -446,10 +447,10 @@ for(i in 1:n_files){
     inv_end_index <- which(abs_positions==INV_END-1)
     
     # Fix for multiple mutations at a site
-    if(length(inv_start_index)>1 && length(inv_end_index)>1){
+    if(length(inv_start_index)>1 & length(inv_end_index)>1){
       # if both indeces are duplicated, need to find the pair of columns that are identical
       comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
-      if(length(comparison_a)==0){
+      if(length(comparison_indeces)==0){
         # if no columns are the same, then flip one of the matrices for the other two comparisons
         inv_start_index <- inv_start_index[c(2,1)]
       }
@@ -470,8 +471,11 @@ for(i in 1:n_files){
     ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
     ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 & ms_binary[,inv_end_index]!=1,]
 
-    ms_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-    ms_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    
+    nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
+    nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
     
   } else {
     ms_normal <- ms_binary

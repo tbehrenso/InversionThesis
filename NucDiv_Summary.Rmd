@@ -228,8 +228,13 @@ for(i in 1:n_files){
     ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
     ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 & ms_binary[,inv_end_index]!=1,]
 
-    ms_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-    ms_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    nucdiv_normal_windowed <- calc_nuc_div(
+      ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    nucdiv_inverted_windowed <- calc_nuc_div(
+      ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+    
+    nucdiv_normal[i,] <- nucdiv_normal_windowed[[2]]
+    nucdiv_inverted[i,] <- nucdiv_inverted_windowed[[2]]
     
   } else {
     ms_normal <- ms_binary

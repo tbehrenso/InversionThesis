@@ -172,7 +172,7 @@ ggplot(winpos_both, aes(x=x, fill=pos)) + geom_histogram(alpha=0.5, position="id
 # -----------------------------------------------------
 #     Testing allele frequency plot
 # -----------------------------------------------------
-PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
+PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/15000"
 simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
 
 INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
