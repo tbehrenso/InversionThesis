@@ -31,7 +31,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/5000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -341,6 +341,20 @@ calc_fst_between <- function(msGroup1, msGroup2){
   return(fst_all)
 }
 
+# quick way to count # of windows and see the ranges
+get_windows_ranges <- function(){
+  centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
+  
+  range_list <- character(length=length(centers))
+  for(i in 1:length(centers)){
+    range_list[i] <- paste(centers[i]-WINDOW_SIZE, "-", centers[i]+WINDOW_SIZE)
+  }
+  print(paste('Number of Windows:', length(centers)))
+  return(range_list)
+}
+
+
+
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
@@ -529,7 +543,9 @@ nucdiv_all_long <- melt(nucdiv_all, id='center')
 plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=variable)) +
   geom_line() +
   ggtitle('Nucleotide Diversity for Different Haplotypes') +
-  gglayer_markers
+  gglayer_markers +
+  geom_vline(xintercept = 1250, linetype='dashed', colour='green') +
+  geom_vline(xintercept = 11250, linetype='dashed', colour='green')
 
 #-----------------------------------------------------------
 # DIVERSITY - ALTERNATIVE (SFS)
@@ -662,6 +678,7 @@ if(INVERSION_PRESENT && generation > 5000){
     ggtitle('F_ST between Haplotypes') + 
     xlab('Position') + ylab(expression(F[ST])) +
     gglayer_markers
+
   
   if(on_cluster){
     ggsave('fst_haps.png', plot_fst_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)

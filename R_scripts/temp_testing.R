@@ -222,6 +222,42 @@ ms_p2 <- get_ms_data(FILEPATH2)
 pos_p1 <- get_positions(FILEPATH1)
 pos_p2 <- get_positions(FILEPATH2)
 
+ms_p1_inv <- ms_p1[ms_p1[,which(pos_p1==INV_START)]==1 & ms_p1[,which(pos_p1==INV_END-1)]==1,]
+ms_p1_nor <- ms_p1[ms_p1[,which(pos_p1==INV_START)]!=1 & ms_p1[,which(pos_p1==INV_END-1)]!=1,]
+ms_p2_inv <- ms_p2[ms_p2[,which(pos_p2==INV_START)]==1 & ms_p2[,which(pos_p2==INV_END-1)]==1,]
+ms_p2_nor <- ms_p2[ms_p2[,which(pos_p2==INV_START)]!=1 & ms_p2[,which(pos_p2==INV_END-1)]!=1,]
+
+
+ms_p1_inv_win1 <- ms_p1_inv[,pos_p1 <= 2500 & pos_p1 >= 1]
+ms_p1_inv_win2 <- ms_p1_inv[,pos_p1 <= 12500 & pos_p1 >= 10001]
+ms_p2_inv_win1 <- ms_p2_inv[,pos_p2 <= 2500 & pos_p2 >= 1]
+ms_p2_inv_win2 <- ms_p2_inv[,pos_p2 <= 12500 & pos_p2 >= 10001]
+ms_p1_nor_win1 <- ms_p1_nor[,pos_p1 <= 2500 & pos_p1 >= 1]
+ms_p1_nor_win2 <- ms_p1_nor[,pos_p1 <= 12500 & pos_p1 >= 10001]
+ms_p2_nor_win1 <- ms_p2_nor[,pos_p2 <= 2500 & pos_p2 >= 1]
+ms_p2_nor_win2 <- ms_p2_nor[,pos_p2 <= 12500 & pos_p2 >= 10001]
+
+
+
+nucdiv_short <- function(ms_in_seq, seqLen){
+  num_of_seq <- dim(ms_in_seq)[1]
+  # dist calculates distance between every combination of rows in a matrix. Manhattan method avoids "diagonal" distance
+  distances_all <- dist(ms_in_seq, method='manhattan')
+  # use this to adjust the sequence length when the window exceeds the range of the genome
+  output <- (2*sum(distances_all) / (num_of_seq^2)) / seqLen
+  return(output)
+}
+
+
+nucdiv_p1_inv_win1 <- nucdiv_short(ms_p1_inv_win1, 2500)
+nucdiv_p1_inv_win2 <- nucdiv_short(ms_p1_inv_win2, 2500)
+nucdiv_p2_inv_win1 <- nucdiv_short(ms_p2_inv_win1, 2500)
+nucdiv_p2_inv_win2 <- nucdiv_short(ms_p2_inv_win2, 2500)
+nucdiv_p1_nor_win1 <- nucdiv_short(ms_p1_nor_win1, 2500)
+nucdiv_p1_nor_win2 <- nucdiv_short(ms_p1_nor_win2, 2500)
+nucdiv_p2_nor_win1 <- nucdiv_short(ms_p2_nor_win1, 2500)
+nucdiv_p2_nor_win2 <- nucdiv_short(ms_p2_nor_win2, 2500)
+
 
 
 
