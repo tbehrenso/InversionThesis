@@ -210,6 +210,26 @@ calc_nuc_div_sfs(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, 
 calc_nuc_div_popgenome(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqLen=7,centerSpacing=7)
 
 
+# -----------------------------------
+#  Calc nucdiv in Kim's Windows of replicate 1
+# -----------------------------------
+
+FILEPATH1 <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000/linkage2P_p1_0.01_0.001_1_.txt"
+FILEPATH2 <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000/linkage2P_p2_0.01_0.001_1_.txt"
+
+ms_p1 <- get_ms_data(FILEPATH1)
+ms_p2 <- get_ms_data(FILEPATH2)
+pos_p1 <- get_positions(FILEPATH1)
+pos_p2 <- get_positions(FILEPATH2)
+
+
+
+
+
+
+
+
+
 
 
 
