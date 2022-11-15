@@ -1,0 +1,186 @@
+---
+title: "Calculating Expected Heterozygosity"
+author: "Thomas Behrens"
+date: "15/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/tbehr/Desktop/Thesis")
+```
+
+Note: The steps for this calculation are largely similar to those for nucleotide diversity, with the exception of that the sliding window function is separate.
+
+## Setting Parameters
+
+Some parameters need to be set manually, including positional information on the inversion and the locally adapted alleles. Here we also set the parameters for the sliding window. Also automatically extract some information found in the directory name.
+
+```{r message=FALSE}
+# determine whether on cluster or local
+on_cluster <- Sys.info()['sysname']=='Linux'
+
+if(on_cluster){
+  # first argument is directory name, second is generation time point
+  args = commandArgs(trailingOnly=TRUE)
+}else{
+  setwd("C:/Users/tbehr/Desktop/Thesis")
+  }
+
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+library(tidyr)
+
+#-----------------------------------------------------------
+# PARAMETERS
+#-----------------------------------------------------------
+
+GENOME_LENGTH <- 22000
+FIXED_MUTATION_POS1 <- 8000
+FIXED_MUTATION_POS2 <- 12000
+INV_START <- 6000
+INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+WINDOW_SPACING <- 200
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
+
+if(on_cluster){
+  PATH <- paste("Outputs", args[1], args[2], sep="/")
+  simtype <- strsplit(args[1], split='_')[[1]][1]
+  generation <- as.integer(args[2])
+}else{
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
+  simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
+  generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
+}
+
+# record presence or absence of inversion and locally adapted alleles
+INVERSION_PRESENT <- ifelse(simtype=='adaptiveInversion' || simtype=='inversionLAA' ,TRUE, FALSE)
+LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE, FALSE)
+
+# reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
+gglayer_markers <- list(
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
+)
+```
+
+## Functions
+
+**get_ms_data** and **get_positions** are used to extract the binary matrix and absolute positions from the raw MS file.
+
+```{r message=FALSE}
+get_ms_data <- function(filename){
+  # read in ms file (ignoring first 3 lines), and as strings
+  ms_binary_conjoined <- read.table(filename, skip = 3, colClasses = 'character')
+  # split each line into its elements as separate columns
+  ms_binary <- apply(ms_binary_conjoined, 1, function(x) as.integer(unlist(strsplit(x,""))))
+  # flip axes so it matches with original file
+  ms_binary <- t(ms_binary)
+  return(ms_binary)
+}
+
+get_positions <- function(filename){
+  # read in third line of text file containing relative positions
+  positions_row <- readLines(filename)[3]
+  relative_positions <- as.numeric(unlist(strsplit(positions_row, " "))[-1])
+  abs_positions <- relative_positions * (GENOME_LENGTH-1)
+  #return(abs_positions)
+  return(round(abs_positions))
+}
+```
+
+### Sliding Window
+
+With combined columns of a given statistic at each position in a particular sample, this function will generalize that data into a constant number of windows (for given window parameters).  
+The centers of these windows are equally spaced, and include both position 0 and the final position (such that half of the first and last windows will extend beyond the ends of the chromosome).  
+For each of these centers, all values for positions within the range of the window size are averaged uniformly, so each window has a single summary statistic (or NA if no positions fall in the window)  
+
+```{r message=FALSE}
+# takes a dataframe where first column is position and second column is the value
+calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
+  centers <- seq(0, totalLength, by=pointSpacing)
+  output <- data.frame(position=centers, average=NA)
+  for(i in 1:length(centers)){
+    correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
+    output[i, 2] <- mean(correspondingValues)
+  }
+  return(output)
+}
+```
+
+### Single Expected Heterozygosity Calculation
+
+For a single MS file, this function calculates the expected heterozygosity for each column (ie. each position) using $2*p*q$, in which *p* is the frequency of the derived allele. 
+
+```{r message=FALSE}
+calc_hexp <- function(msdata){
+  num_individuals <- nrow(msdata) 
+  # calculate expected heterozygosity as 2*p*(1-p)
+  expected_heterozygosity <- 2 * (colSums(msdata) / num_individuals) * (1-(colSums(msdata) / num_individuals))
+  return(expected_heterozygosity)
+}
+```
+
+## Separated by Population
+
+The primary loop in my script loops over each file one at a time, and calculates and stores the given measures and tags. This is to avoid storing the binary matrix for each file.  
+It also includes the calculation of expected heterozygosity for each output file (each of which belongs to either population 1 or population 2).  
+The result of the **calc_hexp** function is also averaged across a sliding window for consistency between replicates.
+
+``` {r message=TRUE}
+# read in files (values: selection coefficient, migration rate, replicate #)
+files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
+n_files <- length(files)
+# pre-calculate window centers' positions
+window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
+tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
+                         repl=integer(n_files), stringsAsFactors=F)
+hexp_red_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
+
+for(i in 1:n_files){
+  filepath <- paste0(PATH, "/", files[i])
+  ms_binary <- get_ms_data(filepath)
+  abs_positions <- get_positions(filepath)
+  # extract metadata from filename
+  tags <- strsplit(files[i], split='_')[[1]]
+  tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+  # calc hexp at each position, and then a sliding window across the genome
+  exp_het <- calc_hexp(ms_binary)
+  pos_hexp <- data.frame(position=abs_positions, hexp=exp_het)
+  # remove marker mutations
+  pos_hexp <- pos_hexp[pos_hexp$position!=INV_START & pos_hexp$position!=INV_END-1,]
+  hexp_windowed <- calc_sliding_window(pos_hexp, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
+  hexp_red_df[i,] <- hexp_windowed[[2]]
+}
+```
+
+After the loop, all that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
+
+``` {r message=TRUE, fig.width=8, fig.height=4, fig.align="center"}
+hexp_summ_p1 <- data.frame(center= window_centers, hexp=colMeans(hexp_red_df[which(tags_index$population=='p1'),], na.rm=T), 
+                           stdev=apply(hexp_red_df[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
+hexp_summ_p2 <- data.frame(center= window_centers, hexp=colMeans(hexp_red_df[which(tags_index$population=='p2'),], na.rm=T),
+                           stdev=apply(hexp_red_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
+
+hexp_a <- ggplot(hexp_summ_p1, aes(x=center, y=hexp)) +
+  geom_line() +
+  scale_color_brewer(palette="Dark2")+
+  ggtitle('a) Expected Heterozygosity - P1') +
+  gglayer_markers +
+  xlab('Position') + ylab(expression(H[exp]))
+
+hexp_b <- ggplot(hexp_summ_p2, aes(x=center, y=hexp)) +
+  geom_line() +
+  scale_color_brewer(palette="Dark2") +
+  ggtitle('b) Expected Heterozygosity - P2') +
+  gglayer_markers +
+  xlab('Position') + ylab(expression(H[exp]))
+
+grid.arrange(hexp_a, hexp_b, nrow=1)
+```
+
+
+

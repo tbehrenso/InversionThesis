@@ -1,5 +1,5 @@
 ---
-title: "Calculating Measures of Diversity"
+title: "Calculating Nucleotide Diversity"
 author: "Thomas Behrens"
 date: "07/11/2022"
 output: html_document

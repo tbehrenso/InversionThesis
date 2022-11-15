@@ -486,8 +486,8 @@ for(i in 1:n_files){
         # if no columns are the same, then flip one of the matrices for the other two comparisons
         inv_start_index <- inv_start_index[c(2,1)]
       }
-      inv_start_index <- inv_start_index[comparison_a[1]]  # this last index is in case all columns are identical
-      inv_end_index <- inv_end_index[comparison_a[1]]
+      inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+      inv_end_index <- inv_end_index[comparison_indeces[1]]
       
     } else if(length(inv_start_index)>1){
       # if only one index is duplicated, pick the index that is identical to the ms of the single index
