@@ -31,7 +31,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/5000_fiveLines"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -82,6 +82,7 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
+  # if only one individual it becomes a vector, so need to change it to a matrix
   if(is.null(dim(msdata))){
     msdata <- t(as.matrix(msdata))
   }

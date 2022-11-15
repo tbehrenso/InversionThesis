@@ -103,6 +103,10 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
+  # if only one individual it becomes a vector, so need to change it to a matrix
+  if(is.null(dim(msdata))){
+    msdata <- t(as.matrix(msdata))
+  }
   num_of_seq <- dim(msdata)[1]
   for(seqCenter in centers){
     positions_in_sequence <- which(   # select positions within window
@@ -116,12 +120,11 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
       # use this to adjust the sequence length when the window exceeds the range of the genome
       adjusted_seq_len <- sum((c((seqCenter-seqLen):(seqCenter+seqLen)))>=0 & (c((seqCenter-seqLen):(seqCenter+seqLen)))<=totalLength)
       # at a given position (center), nucdiv is the average number of differences divided by the length of the sequence window
-      # Note: average number of differences is the total number of pairwise differences / the number of pairwise difference nChoosek
-      
-      
-      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
       # here using 2x sum of distances_all to account for both parts of the pairwise comparison matrix (above and below the diagonal)
       output[output$position==seqCenter,2] <- (2*sum(distances_all) / (num_of_seq^2)) / adjusted_seq_len
+      
+      # slightly different calculation which ignores comparisons along diagonal
+      # output[output$position==seqCenter,2] <- (sum(distances_all) / choose(num_of_seq,2)) / adjusted_seq_len
     }
   }
   return(output)
@@ -159,7 +162,7 @@ for(i in 1:n_files){
 
 After the loop, all that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
 
-``` {r message=TRUE}
+``` {r message=TRUE, fig.width=8, fig.height=4, fig.align="center"}
 nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p1'),], na.rm=T),
                              stdev=apply(nucdiv_df[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
 nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p2'),], na.rm=T),
@@ -188,7 +191,8 @@ grid.arrange(nucdiv_a, nucdiv_b, nrow=1)
 
 ## Separating by Population and Haplotype
 
-Separating by haplotype 
+Firstly, I check if the inversion is present in the sample, but making sure to correct in cases where there are multiple mutations at that site (which theoretically shouldn't happen, but some issue in SLiM there). The rows of the MS matrix are separated depending on the presence of both inversion marker mutations, and the calculation for nucleotide diversity (including windowing) done for each separately.  
+Note if the sample does not include any inverted individuals, then the nucleotide diversity for the inverted individuals of that replicate are set to NA.
 
 ```{r haplosep}
 nucdiv_inverted <- matrix(0, nrow=n_files, ncol=length(window_centers))
@@ -204,10 +208,10 @@ for(i in 1:n_files){
     inv_end_index <- which(abs_positions==INV_END-1)
     
     # Fix for multiple mutations at a site
-    if(length(inv_start_index)>1 && length(inv_end_index)>1){
+    if(length(inv_start_index)>1 & length(inv_end_index)>1){
       # if both indeces are duplicated, need to find the pair of columns that are identical
       comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
-      if(length(comparison_a)==0){
+      if(length(comparison_indeces)==0){
         # if no columns are the same, then flip one of the matrices for the other two comparisons
         inv_start_index <- inv_start_index[c(2,1)]
       }
@@ -226,7 +230,7 @@ for(i in 1:n_files){
     
     # extract ms rows based on presence of inversion markers
     ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
-    ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 & ms_binary[,inv_end_index]!=1,]
+    ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 | ms_binary[,inv_end_index]!=1,]
 
     nucdiv_normal_windowed <- calc_nuc_div(
       ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
@@ -244,7 +248,6 @@ for(i in 1:n_files){
     nucdiv_inverted[i,] <- NA
   }
 }
-
 
 ```
 
@@ -267,7 +270,7 @@ nucdiv_normal_summ_p2 <- data.frame(center = window_centers,
 
 Aaaand plot.
 
-```{r happlot, echo=FALSE}
+```{r happlot, echo=FALSE, fig.width=9, fig.height=6}
 
 # compile into one data frame
 if(INVERSION_PRESENT){
