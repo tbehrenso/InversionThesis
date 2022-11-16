@@ -31,7 +31,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/14000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -326,13 +326,20 @@ calc_fst_between <- function(msGroup1, msGroup2){
   fst_all <- data.frame(pos=allPositions, fst=numeric(length(allPositions)))
   
   for(i in 1:length(allPositions)){
+    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+    if(is.null(dim(msGroup1))){
+      msGroup1 <- t(as.matrix(msGroup1))
+    }
+    if(is.null(dim(msGroup2))){
+      msGroup2 <- t(as.matrix(msGroup2))
+    }
     # extract columns at current positions
     ms_vect_1 <- msGroup1[ ,as.character(allPositions[i])]
     ms_vect_2 <- msGroup2[ ,as.character(allPositions[i])]
     # calc hexp as 2pq
     hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
     hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
-    av_hexp <- mean(hexp_df$group1[i], hexp_df$group2[i])
+    av_hexp <- mean(hexp_df$group1[i], hexp_df$group2[i], na.rm = TRUE)
     # combine ms data to get hexp of total metapopulation
     ms_vect_both <- c(ms_vect_1, ms_vect_2)
     hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
@@ -479,7 +486,11 @@ for(i in 1:n_files){
     inv_end_index <- which(abs_positions==INV_END-1)
     
     # Fix for multiple mutations at a site
-    if(length(inv_start_index)>1 & length(inv_end_index)>1){
+    # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+    if(length(inv_start_index)>2 | length(inv_end_index)>2){
+      nucdiv_inverted[i,] <- NA
+      nucdiv_normal[i,] <- NA
+    } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
       # if both indeces are duplicated, need to find the pair of columns that are identical
       comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
       if(length(comparison_indeces)==0){
@@ -618,11 +629,11 @@ for(repl in 1:max(tags_index$repl)){
   ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
   colnames(ms_both) <- pos_both
   # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
-  ms_both[1:200,as.character(pos_p1)] <- ms_p1
-  ms_both[201:400,as.character(pos_p2)] <- ms_p2
+  ms_both[1:n_indiv,as.character(pos_p1)] <- ms_p1
+  ms_both[(n_indiv+1):(n_indiv*2),as.character(pos_p2)] <- ms_p2
   # extract rows again (so ms_p1 and ms_p2 now have all positions, with missing positions filled with zeros)
-  ms_p1 <- ms_both[1:200,]
-  ms_p2 <- ms_both[201:400,]
+  ms_p1 <- ms_both[1:n_indiv,]
+  ms_p2 <- ms_both[(n_indiv+1):(n_indiv*2),]
   
   fst_all <- calc_fst_between(ms_p1, ms_p2)
 
@@ -658,16 +669,34 @@ if(INVERSION_PRESENT && generation > 5000){
     colnames(ms_p2) <- pos_p2
     n_indiv <- dim(ms_p1)[1]
     
+    # if in a sample the inversion markers are not present, set to NA and go to next replicate
+    if(!all(c(INV_START, INV_END) %in% pos_both)){
+      fst_all <- NA
+      next
+    }
+    
     ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
     colnames(ms_both) <- pos_both
     # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
-    ms_both[1:200,as.character(pos_p1)] <- ms_p1
-    ms_both[201:400,as.character(pos_p2)] <- ms_p2
+    ms_both[1:n_indiv,as.character(pos_p1)] <- ms_p1
+    ms_both[(n_indiv+1):(n_indiv*2),as.character(pos_p2)] <- ms_p2
     # extract rows based on the presence of both inversion markers
     ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
     ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
     
-    fst_all <- calc_fst_between(ms_normal, ms_inverted)
+    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+    if(is.null(dim(ms_normal))){
+      ms_normal <- t(as.matrix(ms_normal))
+    }
+    if(is.null(dim(ms_inverted))){
+      ms_inverted <- t(as.matrix(ms_inverted))
+    }
+    
+    if(dim(ms_normal)[1]==0 | dim(ms_inverted)[1]==0){
+      fst_all <- NA
+    } else {
+      fst_all <- calc_fst_between(ms_normal, ms_inverted)
+    }
     
     fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
     fst_windowed_haplotypes_all[repl,] <- fst_windowed[,2]
