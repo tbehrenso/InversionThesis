@@ -490,6 +490,7 @@ for(i in 1:n_files){
     if(length(inv_start_index)>2 | length(inv_end_index)>2){
       nucdiv_inverted[i,] <- NA
       nucdiv_normal[i,] <- NA
+      next
     } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
       # if both indeces are duplicated, need to find the pair of columns that are identical
       comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
