@@ -159,25 +159,30 @@ for(i in 1:n_files){
 
 After the loop, all that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
 
-``` {r message=TRUE, fig.width=8, fig.height=4, fig.align="center"}
+``` {r message=TRUE, fig.width=10, fig.height=4, fig.align="center"}
 hexp_summ_p1 <- data.frame(center= window_centers, hexp=colMeans(hexp_red_df[which(tags_index$population=='p1'),], na.rm=T), 
                            stdev=apply(hexp_red_df[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
 hexp_summ_p2 <- data.frame(center= window_centers, hexp=colMeans(hexp_red_df[which(tags_index$population=='p2'),], na.rm=T),
                            stdev=apply(hexp_red_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
+
+min_hexp <- min(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
+max_hexp <- max(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
 
 hexp_a <- ggplot(hexp_summ_p1, aes(x=center, y=hexp)) +
   geom_line() +
   scale_color_brewer(palette="Dark2")+
   ggtitle('a) Expected Heterozygosity - P1') +
   gglayer_markers +
-  xlab('Position') + ylab(expression(H[exp]))
+  xlab('Position') + ylab(expression(H[exp])) +
+  ylim(c(min_hexp, max_hexp))
 
 hexp_b <- ggplot(hexp_summ_p2, aes(x=center, y=hexp)) +
   geom_line() +
   scale_color_brewer(palette="Dark2") +
   ggtitle('b) Expected Heterozygosity - P2') +
   gglayer_markers +
-  xlab('Position') + ylab(expression(H[exp]))
+  xlab('Position') + ylab(expression(H[exp])) +
+  ylim(c(min_hexp, max_hexp))
 
 grid.arrange(hexp_a, hexp_b, nrow=1)
 ```

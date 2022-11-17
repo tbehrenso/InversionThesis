@@ -171,7 +171,6 @@ calc_nuc_div_popgenome <- function(msdata, positions, totalLength, seqLen=200, c
   return(output)
 }
 
-
 # takes a dataframe where first column is position and second column is the value
 calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
   centers <- seq(0, totalLength, by=pointSpacing)
@@ -189,7 +188,6 @@ get_correlations <- function(msdata, positions, numTiles=20){
   positions <- positions[! positions %in% c(INV_START, INV_END-1)]
   msdata <- msdata[, ! positions %in% c(INV_START, INV_END-1)]
   
-  # prep storage (with default value of 1 for the diagonal)
   num_sites <- length(positions)
   # use default method (pearson)
   corr_all <- cor(msdata, method="pearson")
@@ -421,8 +419,6 @@ for(i in 1:n_files){
   correlations_3d[,,i] <- as.matrix(dcast(corr_long, Var1 ~ Var2)[,-1]) # exclude first column (variable names)
 }
 
-get_inversion_frequencies()
-
 #-----------------------------------------------------------
 # DIVERSITY
 #-----------------------------------------------------------
@@ -436,29 +432,35 @@ nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_d
 nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p2'),], na.rm=T),
                              stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
 
+# find max and min values between both populations to get shared axis
+min_hexp <- min(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
+max_hexp <- max(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
+min_nucdiv <- min(nucdiv_summ_p1$nucdiv, nucdiv_summ_p2$nucdiv)
+max_nucdiv <- max(nucdiv_summ_p1$nucdiv, nucdiv_summ_p2$nucdiv)
+
 hexp_a <- ggplot(hexp_summ_p1, aes(x=center, y=hexp)) +
   geom_line() +
   scale_color_brewer(palette="Dark2")+
   ggtitle('a) Expected Heterozygosity - P1') +
   gglayer_markers +
-  xlab('Position') + ylab(expression(H[exp]))
-#ylim(c(0.061, 0.106))
+  xlab('Position') + ylab(expression(H[exp])) +
+  ylim(c(min_hexp, max_hexp))
 
 hexp_b <- ggplot(hexp_summ_p2, aes(x=center, y=hexp)) +
   geom_line() +
   scale_color_brewer(palette="Dark2") +
   ggtitle('b) Expected Heterozygosity - P2') +
   gglayer_markers +
-  xlab('Position') + ylab(expression(H[exp]))
-#ylim(c(0.061, 0.106))
+  xlab('Position') + ylab(expression(H[exp])) +
+  ylim(c(min_hexp, max_hexp))
 
 nucdiv_a <- ggplot(nucdiv_summ_p1, aes(x=center, y=nucdiv)) +
   geom_line() +
   scale_color_brewer(palette="Dark2")+
   ggtitle('c) Nucleotide Diversity - P1') +
   gglayer_markers +
-  xlab('Position') + ylab('\u03c0')
-#ylim(c(0.0014, 0.0029))
+  xlab('Position') + ylab('\u03c0') +
+  ylim(c(min_nucdiv, max_nucdiv))
 
 nucdiv_b <- ggplot(nucdiv_summ_p2, aes(x=center, y=nucdiv)) +
   geom_line() +
@@ -466,8 +468,8 @@ nucdiv_b <- ggplot(nucdiv_summ_p2, aes(x=center, y=nucdiv)) +
   ggtitle('d) Nucleotide Diversity - P2') +
   gglayer_markers +
   #geom_errorbar(aes(ymin=nucdiv-stdev, ymax=nucdiv+stdev), width=1, position=position_dodge(0.1)) +
-  xlab('Position') + ylab('\u03c0')
-#ylim(c(0.0014, 0.0029))
+  xlab('Position') + ylab('\u03c0') +
+  ylim(c(min_nucdiv, max_nucdiv))
 
 plot_nucdiv_hexp <- grid.arrange(hexp_a, hexp_b, nucdiv_a, nucdiv_b, nrow=2)
 
