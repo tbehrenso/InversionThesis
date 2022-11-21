@@ -193,6 +193,8 @@ corr_summ_p2_long <- melt(corr_summ_p2)
 bin_size <- GENOME_LENGTH / N_TILES
 corr_summ_p2_long$Var1 <- corr_summ_p2_long$Var1*bin_size - bin_size/2
 corr_summ_p2_long$Var2 <- corr_summ_p2_long$Var2*bin_size - bin_size/2
+
+corr_summ_p1_long[1:10,]
 ```
 
 In the resulting correlation heatmap, we expect to see an increased correlation within the inverted region as recombination is decreased. Furthermore, there should be a particularly high correlation between the locally adapted alleles at positions 8000 and 12000.  

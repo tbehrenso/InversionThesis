@@ -82,9 +82,10 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
-  # if only one individual it becomes a vector, so need to change it to a matrix
+  # if only one individual it becomes a vector. If just one individual, cannot calculate nucdiv (or rather, would be all zero)
   if(is.null(dim(msdata))){
-    msdata <- t(as.matrix(msdata))
+    # msdata <- t(as.matrix(msdata))
+    return(output)
   }
   num_of_seq <- dim(msdata)[1]
   for(seqCenter in centers){
