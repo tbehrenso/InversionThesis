@@ -18,19 +18,15 @@ nrep=100
 r=1e-6
 rec=1e-6
 
-sim_type=inversionLAA_2pop
+sim_type=neutral_2pop
 dir_name=${sim_type}_s${s}_m${m}_mu${mu}_r${rec}
-
-mkdir Plots/${dir_name}
-
-mkdir Plots/${dir_name}/{5000,10000,15000}
 
 Outputs/${dir_name}/{10000,15000}
 
 #mkdir Plots/${dir_name}/{5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000}
 #Outputs/${dir_name}/{5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000}
 
-for i in {10000,15000}
+for i in {5000,10000,15000}
 do
-	Rscript R_scripts/Inversion_Rep_General.R ${dir_name} $i
+	Rscript R_scripts/justNucdivHaplo.R ${dir_name} $i
 done

@@ -2,7 +2,7 @@
 
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4000M
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=slimjob
 #SBATCH --output=/data/users/tbehrens/InversionThesis/slim_output/slim_%j.o
 #SBATCH --error=/data/users/tbehrens/InversionThesis/errors_slim/error_slim_%j.e
@@ -13,12 +13,12 @@ module load R/latest
 module load Development/gcc/9.2.1
 
 s=0.1
-m=0.001
+m=0.01
 mu=1e-5
 nrep=100
 rec=1e-6
 
-sim_type=locallyAdapted_2pop
+sim_type=inversionLAA_2pop
 dir_name=${sim_type}_s${s}_m${m}_mu${mu}_r${rec}
 tempdir=$SCRATCH
 
