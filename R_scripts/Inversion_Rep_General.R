@@ -363,8 +363,6 @@ get_windows_ranges <- function(){
   return(range_list)
 }
 
-
-
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
@@ -562,17 +560,7 @@ nucdiv_all_long <- melt(nucdiv_all, id='center')
 plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=variable)) +
   geom_line() +
   ggtitle('Nucleotide Diversity for Different Haplotypes') +
-  gglayer_markers +
-  geom_vline(xintercept = 1250, linetype='dashed', colour='green') +
-  geom_vline(xintercept = 11250, linetype='dashed', colour='green')
-
-#-----------------------------------------------------------
-# DIVERSITY - ALTERNATIVE (SFS)
-#-----------------------------------------------------------
-
-
-
-
+  gglayer_markers
 
 #-----------------------------------------------------------
 # CORRELATION

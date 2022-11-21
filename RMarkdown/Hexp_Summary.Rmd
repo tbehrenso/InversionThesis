@@ -159,11 +159,15 @@ for(i in 1:n_files){
 
 After the loop, all that is required in this step is to separate the rows of the dataframe of nucleotide diversity values by population, which can be accomplished using the tags as indeces.
 
-``` {r message=TRUE, fig.width=10, fig.height=4, fig.align="center"}
+``` {r message=TRUE}
 hexp_summ_p1 <- data.frame(center= window_centers, hexp=colMeans(hexp_red_df[which(tags_index$population=='p1'),], na.rm=T), 
                            stdev=apply(hexp_red_df[which(tags_index$population=='p1'),], 2, sd, na.rm=T))
 hexp_summ_p2 <- data.frame(center= window_centers, hexp=colMeans(hexp_red_df[which(tags_index$population=='p2'),], na.rm=T),
                            stdev=apply(hexp_red_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
+```
+
+``` {r echo=FALSE, fig.width=10, fig.height=4, fig.align="center"}
+head(hexp_summ_p1)
 
 min_hexp <- min(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
 max_hexp <- max(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
