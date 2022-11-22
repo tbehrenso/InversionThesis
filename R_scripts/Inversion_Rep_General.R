@@ -183,6 +183,21 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
   return(output)
 }
 
+# takes a dataframe where first column is position and second column is the value
+calc_sliding_window_gaussian <- function(posValData, totalLength, windowSize, pointSpacing, stdev=100){
+  centers <- seq(0, totalLength, by=pointSpacing)
+  output <- data.frame(position=centers, average=NA)
+  for(i in 1:length(centers)){
+    correspondingIndeces <- posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize
+    correspondingPositions <- posValData[1][correspondingIndeces]
+    correspondingValues <- posValData[2][correspondingIndeces]
+    gaussianValues <- dnorm(correspondingPositions, mean=centers[i], sd=stdev)
+    gaussianNormalized <- gaussianValues / sum(gaussianValues)
+    output[i, 2] <- mean(correspondingValues)
+  }
+  return(output)
+}
+
 # MODIFIED TO REMOVE MARKER MUTATIONS
 get_correlations <- function(msdata, positions, numTiles=20){
   # remove inversion marker mutations

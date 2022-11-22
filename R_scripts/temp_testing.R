@@ -145,20 +145,36 @@ nucdiv_p2_nor_win2 <- nucdiv_short(ms_p2_nor_win2, 2500)
 #  Gaussian sliding window
 # -----------------------------------
 
-testdata <- c(1,5,1,6,8,2,3,6,2,7,2,7,2,7,2,4,6,2)
+testdata <- c(1,5,1,6,8,2,3,6,2,7,5,7,5,7,2,4,6,2)
 testpositions <- c(1,12,35,41,45,58,65,67,74,88,99,101,109,110,121,131,136,140)
 
+testall <- data.frame(testpositions, testdata)
 
 center <- 8
 
+dnorm(testpositions, mean=testpositions[center], sd=20)
+
+# takes a dataframe where first column is position and second column is the value
+calc_sliding_window_gaussian <- function(posValData, totalLength, windowSize, pointSpacing, stdev){
+  centers <- seq(0, totalLength, by=pointSpacing)
+  output <- data.frame(position=centers, average=NA)
+  for(i in 1:length(centers)){
+    correspondingIndeces <- posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize
+    correspondingPositions <- posValData[1][correspondingIndeces]
+    correspondingValues <- posValData[2][correspondingIndeces]
+    gaussianValues <- dnorm(correspondingPositions, mean=centers[i], sd=stdev)
+    gaussianNormalized <- gaussianValues / sum(gaussianValues)
+    output[i, 2] <- mean(correspondingValues)
+  }
+  return(output)
+}
+
+gaussian_test <- calc_sliding_window_gaussian(testall, totalLength=150, windowSize=20, pointSpacing=20)
 
 
+plot(testpositions, testdata, type='l')
 
-
-
-
-
-
+plot(gaussian_test$position, gaussian_test$average, type='l')
 
 
 
