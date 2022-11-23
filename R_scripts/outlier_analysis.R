@@ -240,7 +240,18 @@ for(i in 1:n_files){
 
 corr_outliers_all <- subset(corr_outliers_all, value<1)
 
-ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) +
-  geom_point(alpha=0.05)
+outlier_scatterplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) +
+  geom_point(alpha=0.01)
+
+
+outlier_hexplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) +
+  stat_binhex()
+
+
+
+if(on_cluster){
+  ggsave('corr_outlier_scatter.png', outlier_scatterplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('corr_outlier_hex.png', outlier_hexplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+}
 
 
