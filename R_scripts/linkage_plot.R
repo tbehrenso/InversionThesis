@@ -155,9 +155,8 @@ for(i in 1:n_files){
   
   # Fix for multiple mutations at a site
   # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
-  if(length(inv_start_index)>2 | length(inv_end_index)>2){
-    nucdiv_inverted[i,] <- NA
-    nucdiv_normal[i,] <- NA
+  if(length(inv_start_index)>2 | length(inv_end_index)>2 | length(inv_start_index)==0){
+    breakpoint_corr_windowed_all[i,] <- NA
     next
   } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
     # if both indeces are duplicated, need to find the pair of columns that are identical
@@ -179,6 +178,7 @@ for(i in 1:n_files){
     inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
   }
   
+  
   breakpoint_vector <- ms_binary[,inv_start_index]
   
   breakpoint_corr <- cor(breakpoint_vector, ms_binary, method="pearson")
@@ -193,8 +193,8 @@ for(i in 1:n_files){
 
 breakpoints_corr_mean <- data.frame(pos=window_centers, corr_mean=colMeans(breakpoint_corr_windowed_all, na.rm=T))
 
-ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
+plot_corr_breakpoints <- ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
 
-
+ggsave('corr_breakpoint.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
 
 
