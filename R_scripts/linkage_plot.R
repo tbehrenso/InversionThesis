@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 50
+WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -115,6 +115,18 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   return(red_long)
 }
 
+# takes a dataframe where first column is position and second column is the value
+calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacing){
+  centers <- seq(0, totalLength, by=pointSpacing)
+  output <- data.frame(position=centers, average=NA)
+  for(i in 1:length(centers)){
+    correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
+    output[i, 2] <- mean(correspondingValues)
+  }
+  return(output)
+}
+
+
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
@@ -128,7 +140,7 @@ window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 # STORAGE DATAFRAMES
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
-correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))
+breakpoint_corr_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
 
 for(i in 1:n_files){
   filepath <- paste0(PATH, "/", files[i])
@@ -174,12 +186,14 @@ for(i in 1:n_files){
   
   breakpoints_corr_df <- data.frame(pos=abs_positions, corr=as.vector(breakpoints_corr_abs))
   
+  breakpoint_corr_windowed <- calc_sliding_window(breakpoints_corr_df, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
   
-  ggplot(breakpoints_corr_df, aes(x=pos, y=corr)) + geom_line()
+  breakpoint_corr_windowed_all[i,] <- breakpoint_corr_windowed$average
 }
 
+breakpoints_corr_mean <- data.frame(pos=window_centers, corr_mean=colMeans(breakpoint_corr_windowed_all, na.rm=T))
 
-
+ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
 
 
 
