@@ -227,11 +227,11 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   # convert to long, then convert position indeces to corresponding group numbers
   data_long <- melt(corrData)
   
-  #data_long$Var1 <- pos_grouping$group[data_long$Var1]
-  #data_long$Var2 <- pos_grouping$group[data_long$Var2]
+  data_long$Var1 <- pos_grouping$group[data_long$Var1]
+  data_long$Var2 <- pos_grouping$group[data_long$Var2]
   
-  data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
-  data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
+  #data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
+  #data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
   
   # averaging correlations within each combination (i,j) of bins
   red_long_incomplete <- aggregate(value ~ Var1 + Var2, data=data_long, FUN=mean, drop=F, na.rm=T)

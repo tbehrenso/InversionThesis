@@ -167,10 +167,15 @@ for(i in 1:n_files){
     inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
   }
   
+  breakpoint_vector <- ms_binary[,inv_start_index]
+  
+  breakpoint_corr <- cor(breakpoint_vector, ms_binary, method="pearson")
+  breakpoints_corr_abs <- abs(breakpoint_corr)
+  
+  breakpoints_corr_df <- data.frame(pos=abs_positions, corr=as.vector(breakpoints_corr_abs))
   
   
-  
-  
+  ggplot(breakpoints_corr_df, aes(x=pos, y=corr)) + geom_line()
 }
 
 

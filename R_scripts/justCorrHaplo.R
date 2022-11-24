@@ -97,11 +97,11 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   # convert to long, then convert position indeces to corresponding group numbers
   data_long <- melt(corrData)
   
-  #data_long$Var1 <- pos_grouping$group[pos_grouping$position==data_long$Var1]
-  #data_long$Var2 <- pos_grouping$group[pos_grouping$position==data_long$Var2]
+  data_long$Var1 <- pos_grouping$group[data_long$Var1]
+  data_long$Var2 <- pos_grouping$group[data_long$Var2]
   
-  data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
-  data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
+  #data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
+  #data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
   
   # averaging correlations within each combination (i,j) of bins
   red_long_incomplete <- aggregate(value ~ Var1 + Var2, data=data_long, FUN=mean, drop=F, na.rm=T)
@@ -174,6 +174,9 @@ if(INVERSION_PRESENT && generation > 5000){
     # extract rows based on the presence of both inversion markers
     ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
     ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
+    
+    colnames(ms_normal) <- NULL
+    colnames(ms_inverted) <- NULL
     
     # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
     if(is.null(dim(ms_normal))){

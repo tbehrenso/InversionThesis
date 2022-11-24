@@ -31,7 +31,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -97,11 +97,11 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   # convert to long, then convert position indeces to corresponding group numbers
   data_long <- melt(corrData)
   
-  #data_long$Var1 <- pos_grouping$group[pos_grouping$position==data_long$Var1]
-  #data_long$Var2 <- pos_grouping$group[pos_grouping$position==data_long$Var2]
+  data_long$Var1 <- pos_grouping$group[data_long$Var1]
+  data_long$Var2 <- pos_grouping$group[data_long$Var2]
   
-  data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
-  data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
+  #data_long$Var1 <- pos_grouping$group[match(data_long$Var1, pos_grouping$position)]
+  #data_long$Var2 <- pos_grouping$group[match(data_long$Var2, pos_grouping$position)]
   
   # averaging correlations within each combination (i,j) of bins
   red_long_incomplete <- aggregate(value ~ Var1 + Var2, data=data_long, FUN=mean, drop=F, na.rm=T)
