@@ -264,13 +264,13 @@ outlier_heatmap <- ggplot(outlier_counts_all_long, aes(x=Var1, y=Var2, fill=valu
   ggtitle('P1') + xlab('Position') + ylab('Position')
 
 
-outlier_scatterplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) + geom_point(alpha=0.01, pch='.')
+outlier_scatterplot <- ggplot(corr_outliers, aes(x=Var1, y=Var2)) + geom_point(alpha=0.1)
 
 #outlier_hexplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) + stat_binhex()
 
 
 if(on_cluster){
-  #ggsave('corr_outlier_scatter.png', outlier_scatterplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('corr_outlier_scatter.png', outlier_scatterplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
   ggsave('corr_outlier_heatmap.png', outlier_heatmap, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
 }
 
