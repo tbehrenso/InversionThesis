@@ -217,7 +217,8 @@ window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 # STORAGE DATAFRAMES
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
-corr_outliers_all <- data.frame(pos1=numeric(), pos2=numeric(), value=numeric())
+
+outlier_counts_all <- matrix(0, nrow=N_TILES, ncol=N_TILES)
 
 for(i in 1:n_files){
   filepath <- paste0(PATH, "/", files[i])
@@ -235,20 +236,42 @@ for(i in 1:n_files){
   
   corr_outliers <- subset(data_long, value > (mean_corr + 2*sd_corr))
   
-  corr_outliers_all <- rbind(corr_outliers_all, corr_outliers)
+  bin_size <- GENOME_LENGTH / N_TILES
+  
+  # change position index to tile index
+  corr_outliers$Var1 <- ceiling(abs_positions[corr_outliers$Var1] / bin_size)
+  corr_outliers$Var2 <- ceiling(abs_positions[corr_outliers$Var2] / bin_size)
+  
+  outlier_counts <- matrix(0, nrow=N_TILES, ncol=N_TILES)
+  for(i in 1:N_TILES){
+    for(j in 1:N_TILES){
+      outlier_counts[i,j] <- length(corr_outliers$value[corr_outliers$Var1==i & corr_outliers$Var2==j])
+    }
+  }
+  
+  outlier_counts_all <- outlier_counts_all + outlier_counts
 }
 
-corr_outliers_all <- subset(corr_outliers_all, value<1)
+outlier_counts_all_long <- melt(outlier_counts_all)
+# change tile index to bin center
+outlier_counts_all_long$Var1 <- outlier_counts_all_long$Var1*bin_size - bin_size/2
+outlier_counts_all_long$Var2 <- outlier_counts_all_long$Var2*bin_size - bin_size/2
 
-#outlier_scatterplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) + geom_point(alpha=0.01, pch='.')
 
-outlier_hexplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) +
-  stat_binhex()
+outlier_heatmap <- ggplot(outlier_counts_all_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P1') + xlab('Position') + ylab('Position')
+
+
+outlier_scatterplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) + geom_point(alpha=0.01, pch='.')
+
+#outlier_hexplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) + stat_binhex()
 
 
 if(on_cluster){
   #ggsave('corr_outlier_scatter.png', outlier_scatterplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
-  ggsave('corr_outlier_hex.png', outlier_hexplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('corr_outlier_heatmap.png', outlier_heatmap, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
 }
 
 
