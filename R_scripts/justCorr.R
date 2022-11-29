@@ -144,7 +144,6 @@ for(i in 1:n_files){
   correlations_3d[,,i] <- as.matrix(dcast(corr_long, Var1 ~ Var2)[,-1]) # exclude first column (variable names)
 }
 
-
 # correlation heatmap
 corr_summ_p1 <- apply(correlations_3d[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
 corr_summ_p1_long <- melt(corr_summ_p1)
@@ -160,6 +159,21 @@ bin_size <- GENOME_LENGTH / N_TILES
 corr_summ_p2_long$Var1 <- corr_summ_p2_long$Var1*bin_size - bin_size/2
 corr_summ_p2_long$Var2 <- corr_summ_p2_long$Var2*bin_size - bin_size/2
 
+
+
+
+
+###### Extracting just the inversion to plot in the heatmap
+corr_summ_p1_long <- subset(corr_summ_p1_long, Var1 >= INV_START & Var1 <= INV_END)
+corr_summ_p1_long <- subset(corr_summ_p1_long, Var2 >= INV_START & Var2 <= INV_END)
+
+corr_summ_p2_long <- subset(corr_summ_p2_long, Var1 >= INV_START & Var1 <= INV_END)
+corr_summ_p2_long <- subset(corr_summ_p2_long, Var2 >= INV_START & Var2 <= INV_END)
+
+
+
+
+
 corr_a <- ggplot(corr_summ_p1_long, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
   scale_fill_gradient(low='white', high='blue') +
@@ -174,7 +188,7 @@ plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 
 
 if(on_cluster){
-  ggsave('correlation_new.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+  ggsave('correlation_inversion.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
 }
 
 
