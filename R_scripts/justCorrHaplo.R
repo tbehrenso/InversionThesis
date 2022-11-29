@@ -31,7 +31,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -128,6 +128,10 @@ window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 # STORAGE DATAFRAMES
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
+correlations_3d_normal <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))
+correlations_3d_inverted <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))
+
+
 
 for(i in 1:n_files){
   filepath <- paste0(PATH, "/", files[i])
@@ -136,7 +140,136 @@ for(i in 1:n_files){
   # extract metadata from filename
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+  if(INVERSION_PRESENT && generation > 5000){
+    inv_start_index <- which(abs_positions==INV_START)
+    inv_end_index <- which(abs_positions==INV_END-1)
+    
+    # Fix for multiple mutations at a site
+    # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+    if(length(inv_start_index)>2 | length(inv_end_index)>2){
+      correlations_3d_normal[,,i] <- NA
+      correlations_3d_inverted[,,i] <- NA
+      next
+    } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
+      # if both indeces are duplicated, need to find the pair of columns that are identical
+      comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+      if(length(comparison_indeces)==0){
+        # if no columns are the same, then flip one of the matrices for the other two comparisons
+        inv_start_index <- inv_start_index[c(2,1)]
+      }
+      inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+      inv_end_index <- inv_end_index[comparison_indeces[1]]
+      
+    } else if(length(inv_start_index)>1){
+      # if only one index is duplicated, pick the index that is identical to the ms of the single index
+      # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+      # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+      inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+    } else if(length(inv_end_index)>1){
+      # same as previous else if, but if the end breakpoint is duplicated
+      inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+    }
+    
+    ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
+    ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
+    
+    colnames(ms_normal) <- NULL
+    colnames(ms_inverted) <- NULL
+    
+    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+    if(is.null(dim(ms_normal))){
+      ms_normal <- t(as.matrix(ms_normal))
+    }
+    if(is.null(dim(ms_inverted))){
+      ms_inverted <- t(as.matrix(ms_inverted))
+    }
+    
+    normal_is_valid <- TRUE
+    inverted_is_valid <- TRUE
+    
+    if(dim(ms_normal)[1]<=1){
+      normal_is_valid <- FALSE
+    }
+    if(dim(ms_inverted)[1]<=1){
+      inverted_is_valid <- FALSE
+    }
+    if(normal_is_valid){
+      corr_data_normal <- get_correlations(ms_normal, abs_positions, numTiles = N_TILES)
+      corr_long_normal <- reduce_to_long(corr_data_normal, abs_positions, numTiles = N_TILES)
+      correlations_3d_normal[,,i] <- as.matrix(dcast(corr_long_normal, Var1 ~ Var2)[,-1])
+    }
+    if(inverted_is_valid){
+      corr_data_inverted <- get_correlations(ms_inverted, abs_positions, numTiles = N_TILES)
+      corr_long_inverted <- reduce_to_long(corr_data_inverted, abs_positions, numTiles = N_TILES)
+      correlations_3d_inverted[,,i] <- as.matrix(dcast(corr_long_inverted, Var1 ~ Var2)[,-1])
+    }
+    
+    
+  }
 }
+
+bin_size <- GENOME_LENGTH / N_TILES
+
+# correlation heatmap
+corr_summ_p1_normal <- apply(correlations_3d_normal[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p1_normal_long <- melt(corr_summ_p1_normal)
+# correct group values to bin centers
+corr_summ_p1_normal_long$Var1 <- corr_summ_p1_normal_long$Var1*bin_size - bin_size/2
+corr_summ_p1_normal_long$Var2 <- corr_summ_p1_normal_long$Var2*bin_size - bin_size/2
+
+# correlation heatmap
+corr_summ_p1_inverted <- apply(correlations_3d_inverted[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p1_inverted_long <- melt(corr_summ_p1_inverted)
+# correct group values to bin centers
+corr_summ_p1_inverted_long$Var1 <- corr_summ_p1_inverted_long$Var1*bin_size - bin_size/2
+corr_summ_p1_inverted_long$Var2 <- corr_summ_p1_inverted_long$Var2*bin_size - bin_size/2
+
+# correlation heatmap
+corr_summ_p2_normal <- apply(correlations_3d_normal[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p2_normal_long <- melt(corr_summ_p2_normal)
+# correct group values to bin centers
+corr_summ_p2_normal_long$Var1 <- corr_summ_p2_normal_long$Var1*bin_size - bin_size/2
+corr_summ_p2_normal_long$Var2 <- corr_summ_p2_normal_long$Var2*bin_size - bin_size/2
+
+# correlation heatmap
+corr_summ_p2_inverted <- apply(correlations_3d_inverted[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
+corr_summ_p2_inverted_long <- melt(corr_summ_p2_inverted)
+# correct group values to bin centers
+corr_summ_p2_inverted_long$Var1 <- corr_summ_p2_inverted_long$Var1*bin_size - bin_size/2
+corr_summ_p2_inverted_long$Var2 <- corr_summ_p2_inverted_long$Var2*bin_size - bin_size/2
+
+
+
+corr_p1_normal <- ggplot(corr_summ_p1_normal_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P1_Normal') + xlab('Position') + ylab('Position')
+
+corr_p1_inverted <- ggplot(corr_summ_p1_inverted_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P1_Inverted') + xlab('Position') + ylab('Position')
+
+corr_p2_normal <- ggplot(corr_summ_p2_normal_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P2_Normal') + xlab('Position') + ylab('Position')
+
+corr_p2_inverted <- ggplot(corr_summ_p2_inverted_long, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P2_Inverted') + xlab('Position') + ylab('Position')
+
+plot_corr_haplotypes <- grid.arrange(corr_p1_normal, corr_p1_inverted, corr_p2_normal, corr_p2_inverted, nrow=2)
+
+if(on_cluster){
+  ggsave('correlation_haps.png', plot_corr_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=10)
+}else{
+  print(plot_corr_haplotypes)
+}
+
+
 
 #-----------------------------------------------------------
 ### correlation separated by haplotype 
@@ -162,7 +295,6 @@ if(INVERSION_PRESENT && generation > 5000){
     
     # if in a sample the inversion markers are not present, set to NA and go to next replicate
     if(!all(c(INV_START, INV_END) %in% pos_both)){
-      fst_all <- NA
       next
     }
     
@@ -172,8 +304,8 @@ if(INVERSION_PRESENT && generation > 5000){
     ms_both[1:n_indiv,as.character(pos_p1)] <- ms_p1
     ms_both[(n_indiv+1):(n_indiv*2),as.character(pos_p2)] <- ms_p2
     # extract rows based on the presence of both inversion markers
-    ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
-    ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
+    ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_END)]==0, ]
+    ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_END)]==1, ]
     
     colnames(ms_normal) <- NULL
     colnames(ms_inverted) <- NULL

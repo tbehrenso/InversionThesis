@@ -688,8 +688,8 @@ if(INVERSION_PRESENT && generation > 5000){
     ms_both[1:n_indiv,as.character(pos_p1)] <- ms_p1
     ms_both[(n_indiv+1):(n_indiv*2),as.character(pos_p2)] <- ms_p2
     # extract rows based on the presence of both inversion markers
-    ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_START)]==0, ]
-    ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_START)]==1, ]
+    ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_END)]==0, ]
+    ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_END)]==1, ]
     
     # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
     if(is.null(dim(ms_normal))){
