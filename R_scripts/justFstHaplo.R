@@ -228,9 +228,9 @@ plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
   xlab('Position') + ylab(expression(F[ST])) +
   gglayer_markers
 
-fst_haps_pops <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
+plot_fst_haps_pops <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
 
-ggsave('fst_haps_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+ggsave('fst_haps_pops.png', plot_fst_haps_pops, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
 
 
 
