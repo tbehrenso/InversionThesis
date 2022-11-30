@@ -181,7 +181,7 @@ for(i in 1:n_files){
   
   breakpoint_vector <- ms_binary[,inv_start_index]
   
-  breakpoint_corr <- cov(breakpoint_vector, ms_binary)
+  breakpoint_corr <- cor(breakpoint_vector, ms_binary)
   breakpoints_corr_abs <- abs(breakpoint_corr)
   
   breakpoints_corr_df <- data.frame(pos=abs_positions, corr=as.vector(breakpoints_corr_abs))
@@ -206,4 +206,4 @@ ggplot(dat = breakpoints_corr_df,aes(x = pos,y = corr)) +
 ggplot(dat = filter(breakpoints_corr_df,corr<0.5),aes(x = pos)) + 
   geom_histogram(binwidth = 500) 
 
-ms_new <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
+ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]

@@ -198,11 +198,10 @@ calc_sliding_window_gaussian <- function(posValData, totalLength, windowSize, po
   return(output)
 }
 
-# MODIFIED TO REMOVE MARKER MUTATIONS
 get_correlations <- function(msdata, positions, numTiles=20){
   # remove inversion marker mutations
-  positions <- positions[! positions %in% c(INV_START, INV_END-1)]
-  msdata <- msdata[, ! positions %in% c(INV_START, INV_END-1)]
+  #positions <- positions[! positions %in% c(INV_START, INV_END-1)]
+  #msdata <- msdata[, ! positions %in% c(INV_START, INV_END-1)]
   
   num_sites <- length(positions)
   # use default method (pearson)
@@ -212,13 +211,12 @@ get_correlations <- function(msdata, positions, numTiles=20){
   return(corr_all)
 }
 
-#MODIFIED TO REMOVE MARKER MUTATIONS
 reduce_to_long <- function(corrData, positions, numTiles=20){
   # split positions into bins (using range up to full length so replicates can be combined)
   # remove inversion marker mutations
-  positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
-  
-  corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]
+  #positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
+  positions_reduced <- positions
+  #corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]
   
   groups <- cut(c(0, positions_reduced, GENOME_LENGTH), breaks=numTiles, labels=F)
   # associate positions with their groups. Remove first and last group which were only included to specify range
