@@ -220,7 +220,8 @@ tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files
 
 outlier_counts_all <- matrix(0, nrow=N_TILES, ncol=N_TILES)
 
-for(i in 1:n_files){
+#for(i in 1:n_files){
+for(i in 1){
   filepath <- paste0(PATH, "/", files[i])
   ms_binary <- get_ms_data(filepath)
   abs_positions <- get_positions(filepath)
@@ -266,12 +267,13 @@ outlier_heatmap <- ggplot(outlier_counts_all_long, aes(x=Var1, y=Var2, fill=valu
 
 outlier_scatterplot <- ggplot(corr_outliers, aes(x=Var1, y=Var2)) + geom_point(alpha=0.1)
 
-#outlier_hexplot <- ggplot(corr_outliers_all, aes(x=Var1, y=Var2)) + stat_binhex()
+outlier_hexplot <- ggplot(corr_outliers, aes(x=Var1, y=Var2)) + stat_binhex()
 
 
 if(on_cluster){
   ggsave('corr_outlier_scatter.png', outlier_scatterplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
-  ggsave('corr_outlier_heatmap.png', outlier_heatmap, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  #ggsave('corr_outlier_heatmap.png', outlier_heatmap, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('corr_outlier_hexplot.png', outlier_hexplot, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
 }
 
 
