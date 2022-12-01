@@ -255,9 +255,9 @@ fst_windowed_p1 <- fst_hudson_windowed_all[tags_index$population=='p1',]
 fst_windowed_p2 <- fst_hudson_windowed_all[tags_index$population=='p2',]
 
 fst_p1_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p1, na.rm = T),
-                             stdev=apply(fst_windowed_all, 2, sd, na.rm=T))
+                             stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
 fst_p2_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p2, na.rm = T),
-                             stdev=apply(fst_windowed_all, 2, sd, na.rm=T))
+                             stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
 
 plot_fst_p1 <- ggplot(fst_p1_average, aes(x=pos, y=av_fst)) +
   geom_line() +
