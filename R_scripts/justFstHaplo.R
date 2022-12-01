@@ -87,8 +87,8 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
 }
 
 calc_fst_between <- function(msGroup1, msGroup2){
-  # extract positions from column names
-  allPositionsi <- unique(sort(c(as.integer(colnames(msGroup1)), as.integer(colnames(msGroup2)))))
+  # here can just use abs_positions (but generally can use colnames)
+  allPositions <- abs_positions
   
   # storage
   hexp_df <- data.frame(pos=allPositions, group1=numeric(length(allPositions)), group2=numeric(length(allPositions)), 
