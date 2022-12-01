@@ -337,21 +337,22 @@ calc_fst_between <- function(msGroup1, msGroup2){
                         total=numeric(length(allPositions)))
   fst_all <- data.frame(pos=allPositions, fst=numeric(length(allPositions)))
   
+  # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+  if(is.null(dim(msGroup1))){
+    msGroup1 <- t(as.matrix(msGroup1))
+  }
+  if(is.null(dim(msGroup2))){
+    msGroup2 <- t(as.matrix(msGroup2))
+  }
+  
   for(i in 1:length(allPositions)){
-    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
-    if(is.null(dim(msGroup1))){
-      msGroup1 <- t(as.matrix(msGroup1))
-    }
-    if(is.null(dim(msGroup2))){
-      msGroup2 <- t(as.matrix(msGroup2))
-    }
     # extract columns at current positions
     ms_vect_1 <- msGroup1[ ,as.character(allPositions[i])]
     ms_vect_2 <- msGroup2[ ,as.character(allPositions[i])]
     # calc hexp as 2pq
     hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
     hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
-    av_hexp <- mean(hexp_df$group1[i], hexp_df$group2[i], na.rm = TRUE)
+    av_hexp <- mean(c(hexp_df$group1[i], hexp_df$group2[i]), na.rm = TRUE)
     # combine ms data to get hexp of total metapopulation
     ms_vect_both <- c(ms_vect_1, ms_vect_2)
     hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
