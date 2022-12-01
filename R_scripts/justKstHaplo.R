@@ -155,6 +155,33 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   return(output)
 }
 
+calc_kst_between <- function(msGroup1, msGroup2, positions){
+  # extract positions from column names
+  allPositions <- unique(sort(c(as.integer(colnames(msGroup1)), as.integer(colnames(msGroup2)))))
+  
+  # storage
+  num_of_windows <- length(window_centers)
+  nucdiv_df <- data.frame(pos=window_centers, group1=numeric(num_of_windows), group2=numeric(num_of_windows), 
+                        total=numeric(num_of_windows))
+  kst_all <- data.frame(pos=window_centers, fst=numeric(num_of_windows))
+  
+  # calc nucleotide diversity (over sliding window by default)
+  nucdiv_windowed_1 <- calc_nuc_div(msGroup1, positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+  nucdiv_windowed_2 <- calc_nuc_div(msGroup2, positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+  nucdiv_df$group1 <- nucdiv_windowed_1[[2]]
+  nucdiv_df$group2 <- nucdiv_windowed_2[[2]]
+  
+  ms_both <- rbind(msGroup1, msGroup2)
+  nucdiv_windowed_both <- calc_nuc_div(msGroup1, positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
+  nucdiv_df$total <- nucdiv_windowed_both[[2]]
+  
+  av_nucdiv <- rowMeans(cbind(nucdiv_df$group1, nucdiv_df$group2))
+  kst_all$fst <- (nucdiv_df$total - av_nucdiv) / nucdiv_df$total
+
+  return(kst_all)
+}
+
+
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
@@ -167,7 +194,7 @@ window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 # STORAGE DATAFRAMES
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
-fst_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
+kst_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
 nucdiv_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 
 for(i in 1:n_files){
@@ -178,11 +205,92 @@ for(i in 1:n_files){
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
   
-  # calc nucleotide diversity (over sliding window by default)
-  nucdiv_windowed <- calc_nuc_div(ms_binary, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
-  nucdiv_df[i,] <- nucdiv_windowed[[2]]
+  if(INVERSION_PRESENT && generation > 5000){
+    inv_start_index <- which(abs_positions==INV_START)
+    inv_end_index <- which(abs_positions==INV_END-1)
+    
+    # Fix for multiple mutations at a site
+    # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+    if(length(inv_start_index)>2 | length(inv_end_index)>2){
+      kst_windowed_all[i,] <- NA
+      next
+    } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
+      # if both indeces are duplicated, need to find the pair of columns that are identical
+      comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+      if(length(comparison_indeces)==0){
+        # if no columns are the same, then flip one of the matrices for the other two comparisons
+        inv_start_index <- inv_start_index[c(2,1)]
+      }
+      inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+      inv_end_index <- inv_end_index[comparison_indeces[1]]
+      
+    } else if(length(inv_start_index)>1){
+      # if only one index is duplicated, pick the index that is identical to the ms of the single index
+      # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+      # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+      inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+    } else if(length(inv_end_index)>1){
+      # same as previous else if, but if the end breakpoint is duplicated
+      inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+    }
+    
+    ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
+    ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
+    
+    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+    if(is.null(dim(ms_normal))){
+      ms_normal <- t(as.matrix(ms_normal))
+    }
+    if(is.null(dim(ms_inverted))){
+      ms_inverted <- t(as.matrix(ms_inverted))
+    }
+    
+    colnames(ms_normal) <- abs_positions
+    colnames(ms_inverted) <- abs_positions
+    
+    normal_is_valid <- TRUE
+    inverted_is_valid <- TRUE
+    
+    if(dim(ms_normal)[1]<=1){
+      normal_is_valid <- FALSE
+    }
+    if(dim(ms_inverted)[1]<=1){
+      inverted_is_valid <- FALSE
+    }
+    if(normal_is_valid & inverted_is_valid){
+      kst_windowed <- calc_kst_between(ms_normal, ms_inverted, abs_positions)
+      kst_windowed_all[i,] <- kst_windowed[[2]]
+    }
+  }
 }
 
+kst_windowed_all[is.infinite(kst_windowed_all)] <- NA
+
+kst_windowed_p1 <- kst_windowed_all[tags_index$population=='p1',]
+kst_windowed_p2 <- kst_windowed_all[tags_index$population=='p2',]
+
+kst_p1_average <- data.frame(pos=window_centers, av_kst=colMeans(kst_windowed_p1, na.rm = T), 
+                             stdev=apply(kst_windowed_all, 2, sd, na.rm=T))
+kst_p2_average <- data.frame(pos=window_centers, av_kst=colMeans(kst_windowed_p2, na.rm = T), 
+                             stdev=apply(kst_windowed_all, 2, sd, na.rm=T))
+
+plot_kst_p1 <- ggplot(kst_p1_average, aes(x=pos, y=av_kst)) +
+  geom_line() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P1 - Between Haplotypes') + 
+  xlab('Position') + ylab(expression(F[ST])) +
+  gglayer_markers
+
+plot_kst_p2 <- ggplot(kst_p2_average, aes(x=pos, y=av_kst)) +
+  geom_line() +
+  scale_fill_gradient(low='white', high='blue') +
+  ggtitle('P2 - Between Haplotypes') + 
+  xlab('Position') + ylab(expression(F[ST])) +
+  gglayer_markers
+
+plot_kst_haps_pops <- grid.arrange(plot_kst_p1, plot_kst_p2, nrow=1)
+
+ggsave('kst_haps_pops.png', plot_kst_haps_pops, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
 
 
 
