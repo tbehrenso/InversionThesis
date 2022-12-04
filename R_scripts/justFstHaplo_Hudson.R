@@ -185,7 +185,7 @@ for(i in 1:n_files){
     # Fix for multiple mutations at a site
     # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
     if(length(inv_start_index)>2 | length(inv_end_index)>2){
-      fst_windowed_all[i,] <- NA
+      fst_hudson_windowed_all[i,] <- NA
       next
     } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
       # if both indeces are duplicated, need to find the pair of columns that are identical
