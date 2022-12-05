@@ -219,9 +219,10 @@ for(i in 1:n_files){
     }
     
     # remove marker mutations
-    abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
     ms_normal <- ms_normal[,! abs_positions %in% c(INV_START, INV_END-1)]
     ms_inverted <- ms_inverted[,! abs_positions %in% c(INV_START, INV_END-1)]
+    abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
+
     
     colnames(ms_normal) <- abs_positions
     colnames(ms_inverted) <- abs_positions

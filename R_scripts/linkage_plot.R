@@ -127,6 +127,9 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
 }
 
 
+
+
+
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
