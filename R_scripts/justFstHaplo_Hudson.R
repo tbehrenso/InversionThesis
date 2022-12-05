@@ -218,6 +218,11 @@ for(i in 1:n_files){
       ms_inverted <- t(as.matrix(ms_inverted))
     }
     
+    # remove marker mutations
+    abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
+    ms_normal <- ms_normal[! abs_positions %in% c(INV_START, INV_END-1)]
+    ms_inverted <- ms_inverted[! abs_positions %in% c(INV_START, INV_END-1)]
+    
     colnames(ms_normal) <- abs_positions
     colnames(ms_inverted) <- abs_positions
     
@@ -275,7 +280,7 @@ plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
 
 plot_fst_hudson <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
 
-ggsave('fst_hudson_win25.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=5.5)
+ggsave('fst_hudson_win12_nomarkers.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=5.5)
 
 
 
