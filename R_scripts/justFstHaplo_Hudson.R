@@ -210,6 +210,11 @@ for(i in 1:n_files){
     ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
     ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
     
+    # remove marker mutations
+    abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
+    ms_normal <- ms_normal[! abs_positions %in% c(INV_START, INV_END-1)]
+    ms_inverted <- ms_inverted[! abs_positions %in% c(INV_START, INV_END-1)]
+    
     # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
     if(is.null(dim(ms_normal))){
       ms_normal <- t(as.matrix(ms_normal))
@@ -217,11 +222,6 @@ for(i in 1:n_files){
     if(is.null(dim(ms_inverted))){
       ms_inverted <- t(as.matrix(ms_inverted))
     }
-    
-    # remove marker mutations
-    abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
-    ms_normal <- ms_normal[! abs_positions %in% c(INV_START, INV_END-1)]
-    ms_inverted <- ms_inverted[! abs_positions %in% c(INV_START, INV_END-1)]
     
     colnames(ms_normal) <- abs_positions
     colnames(ms_inverted) <- abs_positions
