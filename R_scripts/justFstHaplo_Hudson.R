@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 25
-WINDOW_SIZE <- 25   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 12
+WINDOW_SIZE <- 12   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -42,8 +42,8 @@ LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE
 
 # reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
 gglayer_markers <- list(
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red', alpha=0.3)},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.3)}
 )
 
 #-----------------------------------------------------------
@@ -260,7 +260,7 @@ fst_p2_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p2
                              stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
 
 plot_fst_p1 <- ggplot(fst_p1_average, aes(x=pos, y=av_fst)) +
-  geom_line() +
+  geom_line()+
   scale_fill_gradient(low='white', high='blue') +
   ggtitle('P1 - Between Haplotypes') +
   xlab('Position') + ylab(expression(F[ST])) +
@@ -275,7 +275,7 @@ plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
 
 plot_fst_hudson <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
 
-ggsave('fst_hudson_win25.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+ggsave('fst_hudson_win25.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=5.5)
 
 
 

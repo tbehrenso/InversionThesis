@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 50
-WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 25
+WINDOW_SIZE <- 25   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -195,15 +195,15 @@ breakpoints_corr_mean <- data.frame(pos=window_centers, corr_mean=colMeans(break
 
 plot_corr_breakpoints <- ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
 
-ggsave('corr_breakpoint.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
+ggsave('corr_breakpoint_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
 
 
 
-ggplot(dat = breakpoints_corr_df,aes(x = pos,y = corr)) + 
-  geom_point() +
-  geom_smooth()
-
-ggplot(dat = filter(breakpoints_corr_df,corr<0.5),aes(x = pos)) + 
-  geom_histogram(binwidth = 500) 
-
-ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
+# ggplot(dat = breakpoints_corr_df,aes(x = pos,y = corr)) + 
+#   geom_point() +
+#   geom_smooth()
+# 
+# ggplot(dat = filter(breakpoints_corr_df,corr<0.5),aes(x = pos)) + 
+#   geom_histogram(binwidth = 500) 
+# 
+# ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
