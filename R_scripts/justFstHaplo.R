@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 25
+WINDOW_SIZE <- 25   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -86,6 +86,7 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
   return(output)
 }
 
+# adjusting for IMBALANCED SAMPLE SIZE
 calc_fst_between <- function(msGroup1, msGroup2){
   # here can just use abs_positions (but generally can use colnames)
   allPositions <- abs_positions
@@ -110,7 +111,9 @@ calc_fst_between <- function(msGroup1, msGroup2){
     # calc hexp as 2pq
     hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
     hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
-    av_hexp <- mean(c(hexp_df$group1[i], hexp_df$group2[i]), na.rm = TRUE)
+    # use weighted average to calculate Hs
+    #av_hexp <- mean(c(hexp_df$group1[i], hexp_df$group2[i]), na.rm = TRUE)
+    av_hexp <- weighted.mean(c(hexp_df$group1[i], hexp_df$group2[i]), w=c(length(ms_vect_1), length(ms_vect_2)), na.rm = TRUE)
     # combine ms data to get hexp of total metapopulation
     ms_vect_both <- c(ms_vect_1, ms_vect_2)
     hexp_total <- 2 * mean(ms_vect_both) * (1 - mean(ms_vect_both))
@@ -231,7 +234,7 @@ plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
 
 plot_fst_haps_pops <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
 
-ggsave('fst_haps_pops.png', plot_fst_haps_pops, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+ggsave('fst_haps_pops_weighted_win25.png', plot_fst_haps_pops, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
 
 
 
