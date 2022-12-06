@@ -187,8 +187,8 @@ for(i in 1:n_files){
   ##### filter out low freq. alleles (as they may be perfectly correlated with breakpoint)
   allele_frequencies <- colMeans(ms_binary)
   
-  ms_binary <- ms_binary[, allele_frequencies > 0.1 & allele_frequencies < 0.9]
-  abs_positions <- abs_positions[allele_frequencies > 0.1 & allele_frequencies < 0.9]
+  ms_binary <- ms_binary[, allele_frequencies > 0.2 & allele_frequencies < 0.8]
+  abs_positions <- abs_positions[allele_frequencies > 0.2 & allele_frequencies < 0.8]
   #####
   
   breakpoint_corr <- cor(breakpoint_vector, ms_binary)
@@ -205,7 +205,7 @@ breakpoints_corr_mean <- data.frame(pos=window_centers, corr_mean=colMeans(break
 
 plot_corr_breakpoints <- ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
 
-ggsave('corr_breakpoint_filtered_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
+ggsave('corr_breakpoint_MOREfiltered_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
 
 
 

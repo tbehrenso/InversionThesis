@@ -265,7 +265,7 @@ outlier_heatmap <- ggplot(outlier_counts_all_long, aes(x=Var1, y=Var2, fill=valu
   ggtitle('P1') + xlab('Position') + ylab('Position')
 
 
-outlier_scatterplot <- ggplot(corr_outliers, aes(x=Var1, y=Var2)) + geom_point(alpha=0.1)
+outlier_scatterplot <- ggplot(corr_outliers, aes(x=Var1, y=Var2)) + geom_point(alpha=0.01)
 
 outlier_hexplot <- ggplot(corr_outliers, aes(x=Var1, y=Var2)) + stat_binhex()
 
