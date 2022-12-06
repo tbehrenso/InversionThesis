@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 25
+WINDOW_SIZE <- 25   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -175,7 +175,8 @@ calc_kst_between <- function(msGroup1, msGroup2, positions){
   nucdiv_windowed_both <- calc_nuc_div(msGroup1, positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
   nucdiv_df$total <- nucdiv_windowed_both[[2]]
   
-  av_nucdiv <- rowMeans(cbind(nucdiv_df$group1, nucdiv_df$group2))
+  # here, instead of row means, taking the weighted mean to account for imbalanced sample sizes
+  av_nucdiv <- rowSums(cbind(nucdiv_df$group1*dim(msGroup1)[1], nucdiv_df$group2*dim(msGroup2)[1])) / (dim(msGroup1)[1] + dim(msGroup2)[1])
   kst_all$fst <- (nucdiv_df$total - av_nucdiv) / nucdiv_df$total
 
   return(kst_all)
@@ -290,7 +291,7 @@ plot_kst_p2 <- ggplot(kst_p2_average, aes(x=pos, y=av_kst)) +
 
 plot_kst_haps_pops <- grid.arrange(plot_kst_p1, plot_kst_p2, nrow=1)
 
-ggsave('kst_haps_pops.png', plot_kst_haps_pops, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+ggsave('kst_haps_pops_weighted_win25.png', plot_kst_haps_pops, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
 
 
 
