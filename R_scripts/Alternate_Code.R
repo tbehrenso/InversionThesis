@@ -334,6 +334,79 @@ calc_nuc_div(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqL
 calc_nuc_div_sfs(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqLen=7,centerSpacing=7)
 calc_nuc_div_popgenome(ms_test_addedzeros, positions_test_addedzeros, totalLength=26, seqLen=7,centerSpacing=7)
 # -----------------------------------------------------
-#     
+#     Original Fst code that separates by JUST haplotype (merges populations)
 # -----------------------------------------------------
 
+
+###### FST -- SEPARATING HaPLOTYPES
+
+if(INVERSION_PRESENT && generation > 5000){
+  fst_windowed_haplotypes_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
+  
+  for(repl in 1:max(tags_index$repl)){
+    # get and prepare ms_data
+    filepath_p1 <- paste0(PATH, "/", files[which(tags_index$population=='p1' & tags_index$repl==repl)])
+    filepath_p2 <- paste0(PATH, "/", files[which(tags_index$population=='p2' & tags_index$repl==repl)])
+    ms_p1 <- get_ms_data(filepath_p1)
+    ms_p2 <- get_ms_data(filepath_p2)
+    pos_p1 <- get_positions(filepath_p1)
+    pos_p2 <- get_positions(filepath_p2)
+    pos_both <- unique(sort(c(pos_p1, pos_p2)))
+    colnames(ms_p1) <- pos_p1
+    colnames(ms_p2) <- pos_p2
+    n_indiv <- dim(ms_p1)[1]
+    
+    # if in a sample the inversion markers are not present, set to NA and go to next replicate
+    if(!all(c(INV_START, INV_END) %in% pos_both)){
+      fst_all <- NA
+      next
+    }
+    
+    ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
+    colnames(ms_both) <- pos_both
+    # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
+    ms_both[1:n_indiv,as.character(pos_p1)] <- ms_p1
+    ms_both[(n_indiv+1):(n_indiv*2),as.character(pos_p2)] <- ms_p2
+    # extract rows based on the presence of both inversion markers
+    ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_END)]==0, ]
+    ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_END)]==1, ]
+    
+    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+    if(is.null(dim(ms_normal))){
+      ms_normal <- t(as.matrix(ms_normal))
+    }
+    if(is.null(dim(ms_inverted))){
+      ms_inverted <- t(as.matrix(ms_inverted))
+    }
+    
+    if(dim(ms_normal)[1]==0 | dim(ms_inverted)[1]==0){
+      fst_all <- NA
+    } else {
+      fst_all <- calc_fst_between(ms_normal, ms_inverted)
+    }
+    
+    fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
+    fst_windowed_haplotypes_all[repl,] <- fst_windowed[,2]
+  }
+  
+  fst_haplotypes_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_haplotypes_all, na.rm = T), 
+                                       stdev=apply(fst_windowed_haplotypes_all, 2, sd, na.rm=T))
+  
+  plot_fst_haplotypes <- ggplot(fst_haplotypes_average, aes(x=pos, y=av_fst)) +
+    geom_line() +
+    scale_fill_gradient(low='white', high='blue') +
+    ggtitle('F_ST between Haplotypes') + 
+    xlab('Position') + ylab(expression(F[ST])) +
+    gglayer_markers
+  
+  
+  if(on_cluster){
+    ggsave('fst_haps.png', plot_fst_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  }else{
+    print(plot_fst_haplotypes)
+  }
+}
+
+# -----------------------------------------------------
+#     
+# -----------------------------------------------------

@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 50
+WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -611,8 +611,6 @@ plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 # DIFFERENTIATION --> F_ST
 #-----------------------------------------------------------
 
-# F_ST statistic
-# storage of Fst across sliding windows
 n_repl <- length(unique(tags_index$repl))
 fst_windowed_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
 
@@ -642,7 +640,7 @@ for(repl in 1:max(tags_index$repl)){
   ms_p2 <- ms_both[(n_indiv+1):(n_indiv*2),]
   
   fst_all <- calc_fst_between(ms_p1, ms_p2)
-
+  
   fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
   fst_windowed_all[repl,] <- fst_windowed[,2]
 }
@@ -657,74 +655,125 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
   xlab('Position') + ylab(expression(F[ST])) +
   gglayer_markers
 
-###### FST -- SEPARATING HaPLOTYPES
-
+##### separating by both haplotype and population
 if(INVERSION_PRESENT && generation > 5000){
-  fst_windowed_haplotypes_all <- matrix(0, nrow=n_repl, ncol=length(window_centers))
+  fst_hudson_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
   
-  for(repl in 1:max(tags_index$repl)){
-    # get and prepare ms_data
-    filepath_p1 <- paste0(PATH, "/", files[which(tags_index$population=='p1' & tags_index$repl==repl)])
-    filepath_p2 <- paste0(PATH, "/", files[which(tags_index$population=='p2' & tags_index$repl==repl)])
-    ms_p1 <- get_ms_data(filepath_p1)
-    ms_p2 <- get_ms_data(filepath_p2)
-    pos_p1 <- get_positions(filepath_p1)
-    pos_p2 <- get_positions(filepath_p2)
-    pos_both <- unique(sort(c(pos_p1, pos_p2)))
-    colnames(ms_p1) <- pos_p1
-    colnames(ms_p2) <- pos_p2
-    n_indiv <- dim(ms_p1)[1]
+  for(i in 1:n_files){
+    filepath <- paste0(PATH, "/", files[i])
+    ms_binary <- get_ms_data(filepath)
+    abs_positions <- get_positions(filepath)
+    # extract metadata from filename
+    tags <- strsplit(files[i], split='_')[[1]]
+    tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
     
-    # if in a sample the inversion markers are not present, set to NA and go to next replicate
-    if(!all(c(INV_START, INV_END) %in% pos_both)){
-      fst_all <- NA
-      next
+    if(INVERSION_PRESENT && generation > 5000){
+      inv_start_index <- which(abs_positions==INV_START)
+      inv_end_index <- which(abs_positions==INV_END-1)
+      
+      # Fix for multiple mutations at a site
+      # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+      if(length(inv_start_index)>2 | length(inv_end_index)>2){
+        fst_hudson_windowed_all[i,] <- NA
+        next
+      } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
+        # if both indeces are duplicated, need to find the pair of columns that are identical
+        comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+        if(length(comparison_indeces)==0){
+          # if no columns are the same, then flip one of the matrices for the other two comparisons
+          inv_start_index <- inv_start_index[c(2,1)]
+        }
+        inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+        inv_end_index <- inv_end_index[comparison_indeces[1]]
+        
+      } else if(length(inv_start_index)>1){
+        # if only one index is duplicated, pick the index that is identical to the ms of the single index
+        # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+        # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+        inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+      } else if(length(inv_end_index)>1){
+        # same as previous else if, but if the end breakpoint is duplicated
+        inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+      }
+      
+      ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
+      ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
+      
+      # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+      if(is.null(dim(ms_normal))){
+        ms_normal <- t(as.matrix(ms_normal))
+      }
+      if(is.null(dim(ms_inverted))){
+        ms_inverted <- t(as.matrix(ms_inverted))
+      }
+      
+      # remove marker mutations
+      ms_normal <- ms_normal[,! abs_positions %in% c(INV_START, INV_END-1)]
+      ms_inverted <- ms_inverted[,! abs_positions %in% c(INV_START, INV_END-1)]
+      abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
+      
+      colnames(ms_normal) <- abs_positions
+      colnames(ms_inverted) <- abs_positions
+      
+      normal_is_valid <- TRUE
+      inverted_is_valid <- TRUE
+      
+      if(dim(ms_normal)[1]<=1){
+        normal_is_valid <- FALSE
+      }
+      if(dim(ms_inverted)[1]<=1){
+        inverted_is_valid <- FALSE
+      }
+      if(normal_is_valid & inverted_is_valid){
+        freq_nor <- colMeans(ms_normal)
+        freq_inv <- colMeans(ms_inverted)
+        # n is sample size
+        n_nor <- dim(ms_normal)[[1]]
+        n_inv <- dim(ms_inverted)[[1]]
+        # Hudson estimator for Fst
+        fst_hudson_numerator <- ((freq_nor - freq_inv)^2) - ((freq_nor*(1-freq_nor))/(n_nor-1)) 
+        - ((freq_inv*(1-freq_inv))/(n_inv-1))
+        fst_hudson_demoninator <- (freq_nor*(1-freq_inv)) + (freq_inv*(1-freq_nor))
+        fst_hudson <- data.frame(pos=abs_positions, fst=fst_hudson_numerator / fst_hudson_demoninator)
+        
+        fst_hudson_windowed <- calc_sliding_window(fst_hudson, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
+        
+        fst_hudson_windowed_all[i,] <- fst_hudson_windowed[[2]]
+      }
     }
-    
-    ms_both <- matrix(0, nrow=2*n_indiv, ncol=length(pos_both))
-    colnames(ms_both) <- pos_both
-    # top half of new matrix is p1 data, bottom half is p2 data. All missing rows in a population 0 by default
-    ms_both[1:n_indiv,as.character(pos_p1)] <- ms_p1
-    ms_both[(n_indiv+1):(n_indiv*2),as.character(pos_p2)] <- ms_p2
-    # extract rows based on the presence of both inversion markers
-    ms_normal <- ms_both[ms_both[,as.character(INV_START)]==0 & ms_both[,as.character(INV_END)]==0, ]
-    ms_inverted <- ms_both[ms_both[,as.character(INV_START)]==1 & ms_both[,as.character(INV_END)]==1, ]
-    
-    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
-    if(is.null(dim(ms_normal))){
-      ms_normal <- t(as.matrix(ms_normal))
-    }
-    if(is.null(dim(ms_inverted))){
-      ms_inverted <- t(as.matrix(ms_inverted))
-    }
-    
-    if(dim(ms_normal)[1]==0 | dim(ms_inverted)[1]==0){
-      fst_all <- NA
-    } else {
-      fst_all <- calc_fst_between(ms_normal, ms_inverted)
-    }
-    
-    fst_windowed <- calc_sliding_window(fst_all, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
-    fst_windowed_haplotypes_all[repl,] <- fst_windowed[,2]
   }
   
-  fst_haplotypes_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_haplotypes_all, na.rm = T), 
-                                       stdev=apply(fst_windowed_haplotypes_all, 2, sd, na.rm=T))
+  fst_windowed_p1 <- fst_hudson_windowed_all[tags_index$population=='p1',]
+  fst_windowed_p2 <- fst_hudson_windowed_all[tags_index$population=='p2',]
   
-  plot_fst_haplotypes <- ggplot(fst_haplotypes_average, aes(x=pos, y=av_fst)) +
-    geom_line() +
+  fst_p1_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p1, na.rm = T),
+                               stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
+  fst_p2_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p2, na.rm = T),
+                               stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
+  
+  plot_fst_p1 <- ggplot(fst_p1_average, aes(x=pos, y=av_fst)) +
+    geom_line()+
     scale_fill_gradient(low='white', high='blue') +
-    ggtitle('F_ST between Haplotypes') + 
+    ggtitle('P1 - Between Haplotypes') +
     xlab('Position') + ylab(expression(F[ST])) +
     gglayer_markers
-
+  
+  plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
+    geom_line() +
+    scale_fill_gradient(low='white', high='blue') +
+    ggtitle('P2 - Between Haplotypes') +
+    xlab('Position') + ylab(expression(F[ST])) +
+    gglayer_markers
+  
+  plot_fst_hudson <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
   
   if(on_cluster){
-    ggsave('fst_haps.png', plot_fst_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+    ggsave('fst_hudson.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=5.5)
   }else{
-    print(plot_fst_haplotypes)
+    print(plot_fst_hudson)
   }
 }
+
 
 #-----------------------------------------------------------
 # FINALIZATION - PLOTTING
