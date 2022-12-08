@@ -177,6 +177,103 @@ plot(testpositions, testdata, type='l')
 plot(gaussian_test$position, gaussian_test$average, type='l')
 
 
+# -----------------------------------
+#  ms_binary splitting by haplotype function
+# -----------------------------------
+
+get_breakpoint_indeces <- function(msdata, positions, breakpoints){
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2]
+  
+  inv_start_index <- which(positions==inv_start)
+  inv_end_index <- which(positions==inv_end-1)
+  
+  # Fix for multiple mutations at a site
+  # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+  if(length(inv_start_index)>2 | length(inv_end_index)>2){
+    return(c(NA, NA))
+  } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
+    # if both indeces are duplicated, need to find the pair of columns that are identical
+    comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+    if(length(comparison_indeces)==0){
+      # if no columns are the same, then flip one of the matrices for the other two comparisons
+      inv_start_index <- inv_start_index[c(2,1)]
+    }
+    inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+    inv_end_index <- inv_end_index[comparison_indeces[1]]
+    
+  } else if(length(inv_start_index)>1){
+    # if only one index is duplicated, pick the index that is identical to the ms of the single index
+    # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+    # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+    inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+  } else if(length(inv_end_index)>1){
+    # same as previous else if, but if the end breakpoint is duplicated
+    inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+  }
+  
+  return(c(inv_start_index, inv_end_index))
+}
+
+breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+
+
+
+split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
+  inv_start_index <- indeces[1]
+  inv_end_index <- indeces[2]
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2] - 1
+  
+  ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
+  ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
+  
+  # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+  if(is.null(dim(ms_normal))){
+    ms_normal <- t(as.matrix(ms_normal))
+  }
+  if(is.null(dim(ms_inverted))){
+    ms_inverted <- t(as.matrix(ms_inverted))
+  }
+  
+  # remove marker mutations
+  ms_normal <- ms_normal[,! abs_positions %in% c(inv_start, inv_end)]
+  ms_inverted <- ms_inverted[,! abs_positions %in% c(inv_start, inv_end)]
+  abs_positions <- abs_positions[! abs_positions %in% c(inv_start, inv_end)]
+  
+  colnames(ms_normal) <- abs_positions
+  colnames(ms_inverted) <- abs_positions
+  
+  return(list(ms_normal, ms_inverted, positions_reduced))
+}
+
+
+ms_split <- split_ms_by_haplotype(ms_binary, abs_positions, c(INV_START, INV_END), breakpoint_indeces)
+
+ms_normal <- ms_split[[1]]
+ms_inverted <- ms_split[[2]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
