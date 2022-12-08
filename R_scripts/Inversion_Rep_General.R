@@ -413,7 +413,8 @@ get_breakpoint_indeces <- function(msdata, positions, breakpoints){
   return(c(inv_start_index, inv_end_index))
 }
 
-# separate ms file into two separate ms (outputted as list) by haplotype
+# separate ms file into two separate ms (outputted as list along with new positions) by haplotype
+# also removes marker mutations
 split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
   inv_start_index <- indeces[1]
   inv_end_index <- indeces[2]
@@ -441,8 +442,6 @@ split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
   
   return(list(ms_normal, ms_inverted, positions_reduced))
 }
-
-
 
 #-----------------------------------------------------------
 # DATA EXTRACTION
@@ -582,6 +581,7 @@ for(i in 1:n_files){
     
     ms_normal <- ms_split[[1]]
     ms_inverted <- ms_split[[2]]
+    abs_positions <- ms_split[[3]]
 
     nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
     nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
@@ -797,7 +797,6 @@ if(INVERSION_PRESENT && generation > 5000){
     print(plot_fst_hudson)
   }
 }
-
 
 #-----------------------------------------------------------
 # FINALIZATION - PLOTTING
