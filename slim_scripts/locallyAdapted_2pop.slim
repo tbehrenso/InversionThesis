@@ -8,8 +8,8 @@ initialize() {
 	//defineConstant("rep", 1);
 	//defineConstant("rec", 1e-6);
 	
-	defineConstant("L", 1020000);
-	defineConstant("INV_LENGTH", 1000000);     // set inversion to be centered on the genome
+	defineConstant("L", 120000);
+	defineConstant("INV_LENGTH", 100000);     // set inversion to be centered on the genome
 	defineConstant("ALLELE_STARTING_FREQ", 50);
 	
 	initializeMutationRate(mu);
@@ -58,8 +58,8 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
 	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add Locally Adapted Alleles to half of population 1
-	LAA.addNewDrawnMutation(m2, 300000);
-	LAA.addNewDrawnMutation(m2, 700000);
+	LAA.addNewDrawnMutation(m2, 30000);
+	LAA.addNewDrawnMutation(m2, 70000);
 }
 
 
@@ -80,8 +80,8 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 		
 		// re-introduce the sweep mutation
 		LAA = sample(p1.genomes, ALLELE_STARTING_FREQ);
-		LAA.addNewDrawnMutation(m2, 300000);
-		LAA.addNewDrawnMutation(m2, 700000);
+		LAA.addNewDrawnMutation(m2, 30000);
+		LAA.addNewDrawnMutation(m2, 70000);
 	}
 	// create output every 1000 generations	
 	if (any(sim.generation == c(6:15)*1000)) {
