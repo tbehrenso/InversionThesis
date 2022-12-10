@@ -460,7 +460,7 @@ pos_frequency <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("pop", "posi
 hexp_red_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 nucdiv_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 frequencies <- matrix(0, nrow=n_files, ncol=length(window_centers))
-correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))  # NOTE: end up switching a lot between long and wide here
+# correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))  # NOTE: end up switching a lot between long and wide here
 #      maybe change so its all in long?
 
 for(i in 1:n_files){
@@ -492,10 +492,10 @@ for(i in 1:n_files){
   frequencies_windowed <- calc_sliding_window(pos_freq, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
   frequencies[i,] <- frequencies_windowed[[2]]
   
-  # correlation matrix into a 3D array (third dimension is file index)
-  corr_data <- get_correlations(ms_binary, abs_positions, numTiles = N_TILES)
-  corr_long <- reduce_to_long(corr_data, abs_positions, numTiles = N_TILES)
-  correlations_3d[,,i] <- as.matrix(dcast(corr_long, Var1 ~ Var2)[,-1]) # exclude first column (variable names)
+  # # correlation matrix into a 3D array (third dimension is file index)
+  # corr_data <- get_correlations(ms_binary, abs_positions, numTiles = N_TILES)
+  # corr_long <- reduce_to_long(corr_data, abs_positions, numTiles = N_TILES)
+  # correlations_3d[,,i] <- as.matrix(dcast(corr_long, Var1 ~ Var2)[,-1]) # exclude first column (variable names)
 }
 
 #-----------------------------------------------------------
@@ -633,32 +633,32 @@ plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=var
 # CORRELATION
 #-----------------------------------------------------------
 
-# correlation heatmap
-corr_summ_p1 <- apply(correlations_3d[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
-corr_summ_p1_long <- melt(corr_summ_p1)
-# correct group values to bin centers
-bin_size <- GENOME_LENGTH / N_TILES
-corr_summ_p1_long$Var1 <- corr_summ_p1_long$Var1*bin_size - bin_size/2
-corr_summ_p1_long$Var2 <- corr_summ_p1_long$Var2*bin_size - bin_size/2
-
-corr_summ_p2 <- apply(correlations_3d[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
-corr_summ_p2_long <- melt(corr_summ_p2)
-# correct group values to bin centers
-bin_size <- GENOME_LENGTH / N_TILES
-corr_summ_p2_long$Var1 <- corr_summ_p2_long$Var1*bin_size - bin_size/2
-corr_summ_p2_long$Var2 <- corr_summ_p2_long$Var2*bin_size - bin_size/2
-
-corr_a <- ggplot(corr_summ_p1_long, aes(x=Var1, y=Var2, fill=value)) +
-  geom_tile() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P1') + xlab('Position') + ylab('Position')
-
-corr_b <- ggplot(corr_summ_p2_long, aes(x=Var1, y=Var2, fill=value)) +
-  geom_tile() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P2') + xlab('Position') + ylab('Position')
-
-plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
+# # correlation heatmap
+# corr_summ_p1 <- apply(correlations_3d[, , which(tags_index$population == "p1")], c(1, 2), mean, na.rm = TRUE)
+# corr_summ_p1_long <- melt(corr_summ_p1)
+# # correct group values to bin centers
+# bin_size <- GENOME_LENGTH / N_TILES
+# corr_summ_p1_long$Var1 <- corr_summ_p1_long$Var1*bin_size - bin_size/2
+# corr_summ_p1_long$Var2 <- corr_summ_p1_long$Var2*bin_size - bin_size/2
+# 
+# corr_summ_p2 <- apply(correlations_3d[, , which(tags_index$population == "p2")], c(1, 2), mean, na.rm = TRUE)
+# corr_summ_p2_long <- melt(corr_summ_p2)
+# # correct group values to bin centers
+# bin_size <- GENOME_LENGTH / N_TILES
+# corr_summ_p2_long$Var1 <- corr_summ_p2_long$Var1*bin_size - bin_size/2
+# corr_summ_p2_long$Var2 <- corr_summ_p2_long$Var2*bin_size - bin_size/2
+# 
+# corr_a <- ggplot(corr_summ_p1_long, aes(x=Var1, y=Var2, fill=value)) +
+#   geom_tile() +
+#   scale_fill_gradient(low='white', high='blue') +
+#   ggtitle('P1') + xlab('Position') + ylab('Position')
+# 
+# corr_b <- ggplot(corr_summ_p2_long, aes(x=Var1, y=Var2, fill=value)) +
+#   geom_tile() +
+#   scale_fill_gradient(low='white', high='blue') +
+#   ggtitle('P2') + xlab('Position') + ylab('Position')
+# 
+# plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 
 #-----------------------------------------------------------
 # Breakpoint Linkage 
@@ -868,7 +868,7 @@ if(INVERSION_PRESENT && generation > 5000){
 if(on_cluster){
   ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
   ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
-  ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
+  #ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
   ggsave('fst_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
 }else{
   # view plots (the ones created with grid.arrange are displayed automatically)
