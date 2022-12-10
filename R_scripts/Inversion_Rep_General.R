@@ -347,8 +347,8 @@ calc_fst_between <- function(msGroup1, msGroup2){
   
   for(i in 1:length(allPositions)){
     # extract columns at current positions
-    ms_vect_1 <- msGroup1[ ,as.character(allPositions[i])]
-    ms_vect_2 <- msGroup2[ ,as.character(allPositions[i])]
+    ms_vect_1 <- msGroup1[ ,i]
+    ms_vect_2 <- msGroup2[ ,i]
     # calc hexp as 2pq
     hexp_df$group1[i] <- 2 * mean(ms_vect_1) * (1 - mean(ms_vect_1))
     hexp_df$group2[i] <- 2 * mean(ms_vect_2) * (1 - mean(ms_vect_2))
@@ -436,6 +436,13 @@ split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
   ms_normal <- ms_normal[,! abs_positions %in% c(inv_start, inv_end)]
   ms_inverted <- ms_inverted[,! abs_positions %in% c(inv_start, inv_end)]
   positions_reduced <- abs_positions[! abs_positions %in% c(inv_start, inv_end)]
+  
+  if(is.null(dim(ms_normal))){
+    ms_normal <- t(as.matrix(ms_normal))
+  }
+  if(is.null(dim(ms_inverted))){
+    ms_inverted <- t(as.matrix(ms_inverted))
+  }
   
   colnames(ms_normal) <- positions_reduced
   colnames(ms_inverted) <- positions_reduced
@@ -720,8 +727,6 @@ if(INVERSION_PRESENT && generation > 5000){
     print(plot_corr_breakpoints_filt)
   }
 }
-
-
 
 #-----------------------------------------------------------
 # DIFFERENTIATION --> F_ST
