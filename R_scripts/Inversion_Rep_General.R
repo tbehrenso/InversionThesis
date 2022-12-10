@@ -17,14 +17,14 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 22000
-FIXED_MUTATION_POS1 <- 8000
-FIXED_MUTATION_POS2 <- 12000
-INV_START <- 6000
-INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 WINDOW_SPACING <- 50
 WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
+N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -659,6 +659,69 @@ corr_b <- ggplot(corr_summ_p2_long, aes(x=Var1, y=Var2, fill=value)) +
   ggtitle('P2') + xlab('Position') + ylab('Position')
 
 plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
+
+#-----------------------------------------------------------
+# Breakpoint Linkage 
+#-----------------------------------------------------------
+if(INVERSION_PRESENT && generation > 5000){
+  breakpoint_corr_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
+  breakpoint_corr_windowed_all_filt <- matrix(0, nrow=n_files, ncol=length(window_centers))
+  
+  for(i in 1:n_files){
+    filepath <- paste0(PATH, "/", files[i])
+    ms_binary <- get_ms_data(filepath)
+    abs_positions <- get_positions(filepath)
+    
+    breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+    
+    inv_start_index <- breakpoint_indeces[1]
+    inv_end_index <- breakpoint_indeces[2]
+    
+    # if both NA, just skip the loop
+    if(all(is.na(breakpoint_indeces))){
+      breakpoint_corr_windowed_all[i,] <- NA
+      breakpoint_corr_windowed_all_filt[i,] <- NA
+      next
+    }
+    
+    breakpoint_vector <- ms_binary[,inv_start_index]
+    
+    ##### filter out low freq. alleles (as they may be perfectly correlated with breakpoint)
+    allele_frequencies <- colMeans(ms_binary)
+    
+    ms_binary_filtered <- ms_binary[, allele_frequencies > 0.1 & allele_frequencies < 0.9]
+    abs_positions_filtered <- abs_positions[allele_frequencies > 0.1 & allele_frequencies < 0.9]
+    #####
+    
+    breakpoint_corr <- cor(breakpoint_vector, ms_binary)
+    breakpoints_corr_abs <- abs(breakpoint_corr)
+    breakpoints_corr_df <- data.frame(pos=abs_positions, corr=as.vector(breakpoints_corr_abs))
+    breakpoint_corr_windowed <- calc_sliding_window(breakpoints_corr_df, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
+    breakpoint_corr_windowed_all[i,] <- breakpoint_corr_windowed$average
+    
+    breakpoint_corr_filt <- cor(breakpoint_vector, ms_binary_filtered)
+    breakpoints_corr_abs_filt <- abs(breakpoint_corr_filt)
+    breakpoints_corr_df_filt <- data.frame(pos=abs_positions_filtered, corr=as.vector(breakpoints_corr_abs_filt))
+    breakpoint_corr_windowed_filt <- calc_sliding_window(breakpoints_corr_df_filt, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
+    breakpoint_corr_windowed_all_filt[i,] <- breakpoint_corr_windowed_filt$average
+  }
+  
+  breakpoints_corr_mean <- data.frame(pos=window_centers, corr_mean=colMeans(breakpoint_corr_windowed_all, na.rm=T))
+  plot_corr_breakpoints <- ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
+  
+  breakpoints_corr_mean_filt <- data.frame(pos=window_centers, corr_mean=colMeans(breakpoint_corr_windowed_all_filt, na.rm=T))
+  plot_corr_breakpoints_filt <- ggplot(breakpoints_corr_mean_filt, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
+  
+  if(on_cluster){
+    ggsave('corr_breakpoint_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
+    ggsave('corr_breakpoint_filtered_win25.png', plot_corr_breakpoints_filt, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
+  }else{
+    print(plot_corr_breakpoints)
+    print(plot_corr_breakpoints_filt)
+  }
+}
+
+
 
 #-----------------------------------------------------------
 # DIFFERENTIATION --> F_ST

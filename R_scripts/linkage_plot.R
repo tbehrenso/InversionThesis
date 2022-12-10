@@ -126,41 +126,19 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
   return(output)
 }
 
-
-
-
-
-#-----------------------------------------------------------
-# DATA EXTRACTION
-#-----------------------------------------------------------
-
-# read in files (values: selection coefficient, migration rate, replicate #)
-files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
-n_files <- length(files)
-# pre-calculate window centers' positions
-window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
-
-# STORAGE DATAFRAMES
-tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
-                         repl=integer(n_files), stringsAsFactors=F)
-breakpoint_corr_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
-
-for(i in 1:n_files){
-  filepath <- paste0(PATH, "/", files[i])
-  ms_binary <- get_ms_data(filepath)
-  abs_positions <- get_positions(filepath)
-  # extract metadata from filename
-  tags <- strsplit(files[i], split='_')[[1]]
-  tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+# get the indeces of the breakpoints in a vector of absolute positions
+# requires the ms data to disentangle when multiple polymorphisms exist at one or both breakpoints
+get_breakpoint_indeces <- function(msdata, positions, breakpoints){
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2]
   
-  inv_start_index <- which(abs_positions==INV_START)
-  inv_end_index <- which(abs_positions==INV_END-1)
+  inv_start_index <- which(positions==inv_start)
+  inv_end_index <- which(positions==inv_end-1)
   
   # Fix for multiple mutations at a site
   # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
-  if(length(inv_start_index)>2 | length(inv_end_index)>2 | length(inv_start_index)==0){
-    breakpoint_corr_windowed_all[i,] <- NA
-    next
+  if(length(inv_start_index)>2 | length(inv_end_index)>2){
+    return(c(NA, NA))
   } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
     # if both indeces are duplicated, need to find the pair of columns that are identical
     comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
@@ -181,32 +159,78 @@ for(i in 1:n_files){
     inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
   }
   
+  return(c(inv_start_index, inv_end_index))
+}
+
+
+#-----------------------------------------------------------
+# DATA EXTRACTION
+#-----------------------------------------------------------
+
+# read in files (values: selection coefficient, migration rate, replicate #)
+files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
+n_files <- length(files)
+# pre-calculate window centers' positions
+window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
+
+# STORAGE DATAFRAMES
+tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
+                         repl=integer(n_files), stringsAsFactors=F)
+breakpoint_corr_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
+breakpoint_corr_windowed_all_filt <- matrix(0, nrow=n_files, ncol=length(window_centers))
+
+
+for(i in 1:n_files){
+  filepath <- paste0(PATH, "/", files[i])
+  ms_binary <- get_ms_data(filepath)
+  abs_positions <- get_positions(filepath)
+  # extract metadata from filename
+  tags <- strsplit(files[i], split='_')[[1]]
+  tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+  breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+  
+  inv_start_index <- breakpoint_indeces[1]
+  inv_end_index <- breakpoint_indeces[2]
+  
+  # if both NA, just skip the loop
+  if(all(is.na(breakpoint_indeces))){
+    breakpoint_corr_windowed_all[i,] <- NA
+    breakpoint_corr_windowed_all_filt[i,] <- NA
+    next
+  }
   
   breakpoint_vector <- ms_binary[,inv_start_index]
   
   ##### filter out low freq. alleles (as they may be perfectly correlated with breakpoint)
   allele_frequencies <- colMeans(ms_binary)
   
-  ms_binary <- ms_binary[, allele_frequencies > 0.2 & allele_frequencies < 0.8]
-  abs_positions <- abs_positions[allele_frequencies > 0.2 & allele_frequencies < 0.8]
+  ms_binary_filtered <- ms_binary[, allele_frequencies > 0.1 & allele_frequencies < 0.9]
+  abs_positions_filtered <- abs_positions[allele_frequencies > 0.1 & allele_frequencies < 0.9]
   #####
   
   breakpoint_corr <- cor(breakpoint_vector, ms_binary)
   breakpoints_corr_abs <- abs(breakpoint_corr)
-  
   breakpoints_corr_df <- data.frame(pos=abs_positions, corr=as.vector(breakpoints_corr_abs))
-  
   breakpoint_corr_windowed <- calc_sliding_window(breakpoints_corr_df, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
-  
   breakpoint_corr_windowed_all[i,] <- breakpoint_corr_windowed$average
+  
+  breakpoint_corr_filt <- cor(breakpoint_vector, ms_binary_filtered)
+  breakpoints_corr_abs_filt <- abs(breakpoint_corr_filt)
+  breakpoints_corr_df_filt <- data.frame(pos=abs_positions_filtered, corr=as.vector(breakpoints_corr_abs_filt))
+  breakpoint_corr_windowed_filt <- calc_sliding_window(breakpoints_corr_df_filt, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
+  breakpoint_corr_windowed_all_filt[i,] <- breakpoint_corr_windowed_filt$average
+  
 }
 
 breakpoints_corr_mean <- data.frame(pos=window_centers, corr_mean=colMeans(breakpoint_corr_windowed_all, na.rm=T))
-
 plot_corr_breakpoints <- ggplot(breakpoints_corr_mean, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
 
-ggsave('corr_breakpoint_MOREfiltered_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
+breakpoints_corr_mean_filt <- data.frame(pos=window_centers, corr_mean=colMeans(breakpoint_corr_windowed_all_filt, na.rm=T))
+plot_corr_breakpoints_filt <- ggplot(breakpoints_corr_mean_filt, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
 
+ggsave('corr_breakpoint_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
+ggsave('corr_breakpoint_filtered_win25.png', plot_corr_breakpoints_filt, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
 
 
 # ggplot(dat = breakpoints_corr_df,aes(x = pos,y = corr)) + 
