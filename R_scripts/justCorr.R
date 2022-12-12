@@ -17,14 +17,14 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 22000
-FIXED_MUTATION_POS1 <- 8000
-FIXED_MUTATION_POS2 <- 12000
-INV_START <- 6000
-INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 600    # number of tiles along each axis of the correlation heatmap
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+WINDOW_SPACING <- 50
+WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 600   # number of tiles along each axis of the correlation heatma
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -187,7 +187,7 @@ plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 
 
 if(on_cluster){
-  ggsave('correlation_inversion_t600.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=24, height=11)
+  ggsave('correlation_inversion_t600.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=36, height=17)
 }
 
 
