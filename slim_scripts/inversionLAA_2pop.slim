@@ -66,8 +66,8 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 	// save the state of the simulation (for looping back to)
 	sim.outputFull(tempdir + "/" + "slim5000_" + simID + ".txt");
 	
-	p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/500/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/500/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add inversions to half of population 1
 	inverted.addNewDrawnMutation(m3, INV_START);
 	inverted.addNewDrawnMutation(m4, INV_END);
