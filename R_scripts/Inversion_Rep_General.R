@@ -17,25 +17,14 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 22000
-FIXED_MUTATION_POS1 <- 8000
-FIXED_MUTATION_POS2 <- 12000
-INV_START <- 6000
-INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 WINDOW_SPACING <- 50
 WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
-
-
-
-# GENOME_LENGTH <- 120000
-# FIXED_MUTATION_POS1 <- 30000
-# FIXED_MUTATION_POS2 <- 70000
-# INV_START <- 10000
-# INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-# WINDOW_SPACING <- 50
-# WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
-# N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -883,7 +872,7 @@ if(INVERSION_PRESENT && generation > 5000){
 
 if(on_cluster){
   ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=12)
-  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=12)
+  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=18, height=12)
   #ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
   ggsave('fst_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=9)
 }else{
