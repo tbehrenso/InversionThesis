@@ -137,10 +137,15 @@ for(i in 1:n_files){
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
   
+  print(paste0("up to pre-calc in i=", i))
+  
   # correlation matrix into a 3D array (third dimension is file index)
   corr_data <- get_correlations(ms_binary, abs_positions, numTiles = N_TILES)
+  print(paste0("completed get_correlations in i=", i))
   corr_long <- reduce_to_long(corr_data, abs_positions, numTiles = N_TILES)
+  print(paste0("completed reduce_to_long in i=", i))
   correlations_3d[,,i] <- as.matrix(dcast(corr_long, Var1 ~ Var2)[,-1]) # exclude first column (variable names)
+  print(paste0("completed as.matrix into 3d storage in i=", i))
 }
 
 # correlation heatmap
