@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 30000
 FIXED_MUTATION_POS2 <- 70000
 INV_START <- 10000
 INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 50
-WINDOW_SIZE <- 50   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 100
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -720,8 +720,8 @@ if(INVERSION_PRESENT && generation > 5000){
   plot_corr_breakpoints_filt <- ggplot(breakpoints_corr_mean_filt, aes(x=pos, y=corr_mean)) + geom_line() + gglayer_markers
   
   if(on_cluster){
-    ggsave('corr_breakpoint_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=8)
-    ggsave('corr_breakpoint_filtered_win25.png', plot_corr_breakpoints_filt, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=8)
+    ggsave('corr_breakpoint_win100.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=8)
+    ggsave('corr_breakpoint_filtered_win100.png', plot_corr_breakpoints_filt, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=8)
   }else{
     print(plot_corr_breakpoints)
     print(plot_corr_breakpoints_filt)
@@ -860,7 +860,7 @@ if(INVERSION_PRESENT && generation > 5000){
   plot_fst_hudson <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
   
   if(on_cluster){
-    ggsave('fst_hudson.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=20, height=8)
+    ggsave('fst_hudson_win100.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=20, height=8)
   }else{
     print(plot_fst_hudson)
   }
@@ -871,10 +871,10 @@ if(INVERSION_PRESENT && generation > 5000){
 #-----------------------------------------------------------
 
 if(on_cluster){
-  ggsave('nucdiv_hexp.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=12)
-  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=18, height=12)
+  ggsave('nucdiv_hexp_win100.png', plot_nucdiv_hexp, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=12)
+  ggsave('nucdiv_haplotypes_win100.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=18, height=12)
   #ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
-  ggsave('fst_pops.png', plot_fst, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=9)
+  ggsave('fst_pops.png_win100', plot_fst, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=9)
 }else{
   # view plots (the ones created with grid.arrange are displayed automatically)
   print(plot_nucdiv_haplotypes)
