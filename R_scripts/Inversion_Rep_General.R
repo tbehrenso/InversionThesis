@@ -25,6 +25,7 @@ INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM scrip
 WINDOW_SPACING <- 100
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
+FIRST_GEN <- 500  # first generation where inversion/locally adapted alleles are introduced
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -670,7 +671,7 @@ plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=var
 #-----------------------------------------------------------
 # Breakpoint Linkage 
 #-----------------------------------------------------------
-if(INVERSION_PRESENT && generation > 5000){
+if(INVERSION_PRESENT && generation > FIRST_GEN){
   breakpoint_corr_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
   breakpoint_corr_windowed_all_filt <- matrix(0, nrow=n_files, ncol=length(window_centers))
   
@@ -777,7 +778,7 @@ plot_fst <- ggplot(fst_average, aes(x=pos, y=av_fst)) +
   gglayer_markers
 
 ##### separating by both haplotype and population
-if(INVERSION_PRESENT && generation > 5000){
+if(INVERSION_PRESENT && generation > FIRST_GEN){
   fst_hudson_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
   
   for(i in 1:n_files){
@@ -788,7 +789,7 @@ if(INVERSION_PRESENT && generation > 5000){
     tags <- strsplit(files[i], split='_')[[1]]
     tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
     
-    if(INVERSION_PRESENT && generation > 5000){
+    if(INVERSION_PRESENT && generation > FIRST_GEN){
       breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
       
       inv_start_index <- breakpoint_indeces[1]

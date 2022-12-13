@@ -254,9 +254,13 @@ ms_normal <- ms_split[[1]]
 ms_inverted <- ms_split[[2]]
 
 
+hill <- function(v, nn, K){
+  num <- v^nn
+  den <- (K^nn) + (v^nn)
+  return(num/den)
+}
 
-
-
+hill(3, 5, 5)
 
 
 
