@@ -2,11 +2,11 @@
 
 initialize() {
 	// For testing: variable definitions
-	//defineConstant("mu", 1e-5);
-	//defineConstant("s", 0.01);
-	//defineConstant("m", 0.001);
-	//defineConstant("rep", 1);
-	//defineConstant("rec", 1e-6);
+	defineConstant("mu", 1e-5);
+	defineConstant("s", 0.01);
+	defineConstant("m", 0.001);
+	defineConstant("rep", 1);
+	defineConstant("rec", 1e-6);
 	
 	defineConstant("L", 120000);
 	defineConstant("INV_LENGTH", 100000);     // set inversion to be centered on the genome
@@ -19,11 +19,11 @@ initialize() {
 	initializeMutationType("m2", 0.5, "f", s);  // beneficial by default (p1)
 	initializeMutationType("m3", 0.5, "f", 0.0); // start marker
 	initializeMutationType("m4", 0.5, "f", 0.0); // end marker
-	initializeMutationType("m5", 0.5, "g", 0.001, 1);
+	initializeMutationType("m5", 0.5, "g", -0.01, 1);
 	c(m3,m4).convertToSubstitution = T;
 	c(m3,m4).color = "red";
 	
-	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElementType("g1", c(m1,m5), c(9,1)); // ratio of 9:1 for m1:m5 (ie. 10% deleterious)
 	//initializeGenomicElementType("g2", m2, 1.0);	
 	m1.convertToSubstitution = F;
 	m2.convertToSubstitution = F;
@@ -40,6 +40,8 @@ initialize() {
 	m3.mutationStackPolicy = "f";
 	m4.mutationStackGroup = -1;
 	m4.mutationStackPolicy = "f";
+	m5.mutationStackGroup = -1;
+	m5.mutationStackPolicy = "f";
 }
 1 late() {
 	defineConstant("simID", getSeed());

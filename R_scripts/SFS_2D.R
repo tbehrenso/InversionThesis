@@ -153,6 +153,7 @@ for(i in 1:n_files){
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
 }
 
+n_indiv <- dim(ms_binary)[1]
 n_repl <- length(unique(tags_index$repl))
 sfs_2D <- matrix(0, nrow=n_indiv, ncol=n_indiv)
 
@@ -189,19 +190,21 @@ for(repl in 1:max(tags_index$repl)){
   }
 }
 
-sfs_2D[200,200] <- 0
-sfs_2D[200,200] <- max(sfs_2D)
+max_freq <- dim(sfs_2D)
+
+sfs_2D[max_freq,max_freq] <- 0
+sfs_2D[max_freq,max_freq] <- max(sfs_2D)
 
 sfs_2D_long <- melt(sfs_2D)
 
 sfs_2D_plot <- ggplot(sfs_2D_long, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
   scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P1') + xlab('Position') + ylab('Position')
+  ggtitle('2D SFS') + xlab('Allele Freq - P1') + ylab('Allele Freq - P2')
 
-print(sfs_2D_plot)
-
-
-
-
+if(on_cluster){
+  ggsave('sfs_2D.png', sfs_2D_plot, path=paste("Plots", args[1], args[2], sep="/"), width=20, height=18)
+}else{
+  print(sfs_2D_plot)
+}
 
