@@ -224,7 +224,7 @@ plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 
 
 if(on_cluster){
-  ggsave('correlation_inversion_t600.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=36, height=17)
+  ggsave('correlation_inversion_t600.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=36, height=17, device="png")
 }
 
 

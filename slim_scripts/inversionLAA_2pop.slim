@@ -19,6 +19,7 @@ initialize() {
 	initializeMutationType("m2", 0.5, "f", s);  // beneficial by default (p1)
 	initializeMutationType("m3", 0.5, "f", 0.0); // start marker
 	initializeMutationType("m4", 0.5, "f", 0.0); // end marker
+	initializeMutationType("m5", 0.5, "g", 0.001, 1);
 	c(m3,m4).convertToSubstitution = T;
 	c(m3,m4).color = "red";
 	
