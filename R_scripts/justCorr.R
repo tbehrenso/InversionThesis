@@ -82,7 +82,7 @@ get_correlations <- function(msdata, positions, numTiles=20){
   return(corr_all)
 }
 
-reduce_to_long <- function(corrData, positions, numTiles=20){
+reduce_to_long_OLD <- function(corrData, positions, numTiles=20){
   # split positions into bins (using range up to full length so replicates can be combined)
   # remove inversion marker mutations
   #positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
@@ -113,6 +113,38 @@ reduce_to_long <- function(corrData, positions, numTiles=20){
   
   return(red_long)
 }
+
+# New version of function that loops over cells of summary matrix manually. Should be more memory efficient?
+reduce_to_long <- function(corrData, positions, numTiles=20){
+  # split positions into bins (using range up to full length so replicates can be combined)
+  # remove inversion marker mutations
+  #positions_reduced <- positions[! positions %in% c(INV_START, INV_END-1)]
+  positions_reduced <- positions
+  #corrData <- corrData[! positions %in% c(INV_START, INV_END-1), ! positions %in% c(INV_START, INV_END-1)]
+  
+  groups <- cut(c(0, positions_reduced, GENOME_LENGTH), breaks=numTiles, labels=F)
+  groups <- groups[-c(1,length(groups))]
+
+  # for each tile of the windowed summary matrix, fill each cell with the corresponding values from corrdata based on grouping
+  red_wide <- matrix(NA, nrow=numTiles, ncol=numTiles)
+  for(i in 1:numTiles){
+    for(j in 1:numTiles){
+      which_i <- which(groups==i)
+      which_j <- which(groups==j)
+      if(length(which_i)!=0 & length(which_j)!=0){
+        red_wide[i,j] <- mean(corrData[which_i, which_j], na.rm=T)
+      }
+    }
+  }
+  
+  red_long <- melt(red_wide)
+  # scale group numbers to nucleotide positions
+  red_long[1] <- red_long[1] * (max(GENOME_LENGTH)/numTiles)
+  red_long[2] <- red_long[2] * (max(GENOME_LENGTH)/numTiles)
+  
+  return(red_long)
+}
+
 
 #-----------------------------------------------------------
 # DATA EXTRACTION
