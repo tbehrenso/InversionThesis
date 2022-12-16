@@ -264,7 +264,16 @@ hill(3, 5, 5)
 
 
 
+# -----------------------------------
+#  Plot Gamma Distribution
+# -----------------------------------
 
+shape = 0.1
+mean = 0.01
+scale = mean/shape
+x = seq(0,1,by=0.001)
+y = dgamma(x,shape = shape,scale=scale)
+plot(x,y,type='l',log='x')
 
 
 

@@ -12,8 +12,10 @@ initialize() {
 	
 	initializeMutationRate(mu);
 	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
+	// (below) deleterious mutation with gamma distributed fitness effects
+	initializeMutationType("m5", 0.5, "g", -0.01, 0.1); // mean=-0.01, shape=0.1
 	
-	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElementType("g1", c(m1,m5), c(9,1)); // ratio of 9:1 for m1:m5 (ie. 10% deleterious)
 	//initializeGenomicElementType("g2", m2, 1.0);	
 	m1.convertToSubstitution = F;
 	initializeGenomicElement(g1, 0, L-1);
@@ -21,27 +23,29 @@ initialize() {
 	
 	m1.mutationStackGroup = -1;   // to make sure separate mutations do not stack at a site
 	m1.mutationStackPolicy = "f";
+	m5.mutationStackGroup = -1;
+	m5.mutationStackPolicy = "f";
 }
 
 1 late() {
 	defineConstant("simID", getSeed());
 	
-	sim.addSubpop("p1", 100);
-	sim.addSubpop("p2", 100);
+	sim.addSubpop("p1", 1000);
+	sim.addSubpop("p2", 1000);
 	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
 	p2.setMigrationRates(p1, m);
 
 }
 
-500 late() {
-	p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/500/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-	p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/500/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+5000 late() {
+	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 }
 
-500:1500 late() {
+5000:15000 late() {
 	// create output every 1000 generations	
-	if (any(sim.generation == c(6:15)*100)) {
-		p1.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
-		p2.outputMSSample(100, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	if (any(sim.generation == c(6:15)*1000)) {
+		p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+		p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
 	}
 }
