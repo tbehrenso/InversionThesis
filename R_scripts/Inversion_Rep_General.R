@@ -882,3 +882,16 @@ if(on_cluster){
   print(plot_fst)
 }
 
+if(on_cluster){
+  save(hexp_summ_p1, file=paste("data_summary", args[1], args[2],"hexp_summ_p1.Rds", sep="/"))
+  save(hexp_summ_p2, file=paste("data_summary", args[1], args[2],"hexp_summ_p2.Rds", sep="/"))
+  save(nucdiv_summ_p1, file=paste("data_summary", args[1], args[2],"nucdiv_summ_p1.Rds", sep="/"))
+  save(nucdiv_summ_p2, file=paste("data_summary", args[1], args[2],"nucdiv_summ_p2.Rds", sep="/"))
+  save(nucdiv_all_long, file=paste("data_summary", args[1], args[2],"nucdiv_all_long.Rds", sep="/"))
+  
+  save(breakpoints_corr_mean_filt, file=paste("data_summary", args[1], args[2],"breakpoints_corr_mean_filt.Rds", sep="/"))
+  
+  save(fst_average, file=paste("data_summary", args[1], args[2],"fst_average.Rds", sep="/"))
+  save(fst_p1_average, file=paste("data_summary", args[1], args[2],"fst_p1_average.Rds", sep="/"))
+  save(fst_p2_average, file=paste("data_summary", args[1], args[2],"fst_p2_average.Rds", sep="/"))
+}
