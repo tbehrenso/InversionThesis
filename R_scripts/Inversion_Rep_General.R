@@ -889,9 +889,12 @@ if(on_cluster){
   save(nucdiv_summ_p2, file=paste("data_summary", args[1], args[2],"nucdiv_summ_p2.Rds", sep="/"))
   save(nucdiv_all_long, file=paste("data_summary", args[1], args[2],"nucdiv_all_long.Rds", sep="/"))
   
-  save(breakpoints_corr_mean_filt, file=paste("data_summary", args[1], args[2],"breakpoints_corr_mean_filt.Rds", sep="/"))
+  if(INVERSION_PRESENT && generation > FIRST_GEN){
+    save(breakpoints_corr_mean_filt, file=paste("data_summary", args[1], args[2],"breakpoints_corr_mean_filt.Rds", sep="/"))
+    save(fst_p1_average, file=paste("data_summary", args[1], args[2],"fst_p1_average.Rds", sep="/"))
+    save(fst_p2_average, file=paste("data_summary", args[1], args[2],"fst_p2_average.Rds", sep="/"))
+  }
   
   save(fst_average, file=paste("data_summary", args[1], args[2],"fst_average.Rds", sep="/"))
-  save(fst_p1_average, file=paste("data_summary", args[1], args[2],"fst_p1_average.Rds", sep="/"))
-  save(fst_p2_average, file=paste("data_summary", args[1], args[2],"fst_p2_average.Rds", sep="/"))
+
 }
