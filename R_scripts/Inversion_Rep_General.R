@@ -875,7 +875,7 @@ if(on_cluster){
   ggsave('nucdiv_hexp_win100.png', plot_nucdiv_hexp, device="png", path=paste("Plots", args[1], args[2], sep="/"), width=16, height=12)
   ggsave('nucdiv_haplotypes_win100.png', plot_nucdiv_haplotypes, device="png", path=paste("Plots", args[1], args[2], sep="/"), width=18, height=12)
   #ggsave('correlation.png', plot_correlation, path=paste("Plots", args[1], args[2], sep="/"), width=12, height=5.5)
-  ggsave('fst_pops.png_win100', plot_fst, device="png", path=paste("Plots", args[1], args[2], sep="/"), width=12, height=9)
+  ggsave('fst_pops.png', plot_fst, device="png", path=paste("Plots", args[1], args[2], sep="/"), width=12, height=9)
 }else{
   # view plots (the ones created with grid.arrange are displayed automatically)
   print(plot_nucdiv_haplotypes)

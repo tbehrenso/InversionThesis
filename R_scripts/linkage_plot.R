@@ -141,7 +141,7 @@ get_breakpoint_indeces <- function(msdata, positions, breakpoints){
     return(c(NA, NA))
   } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
     # if both indeces are duplicated, need to find the pair of columns that are identical
-    comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+    comparison_indeces <- which(colSums(msdata[,inv_start_index]!=msdata[,inv_end_index])==0)
     if(length(comparison_indeces)==0){
       # if no columns are the same, then flip one of the matrices for the other two comparisons
       inv_start_index <- inv_start_index[c(2,1)]
@@ -231,7 +231,6 @@ plot_corr_breakpoints_filt <- ggplot(breakpoints_corr_mean_filt, aes(x=pos, y=co
 
 ggsave('corr_breakpoint_win25.png', plot_corr_breakpoints, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
 ggsave('corr_breakpoint_filtered_win25.png', plot_corr_breakpoints_filt, path=paste("Plots", args[1], args[2], sep="/"), width=9, height=6)
-
 
 # ggplot(dat = breakpoints_corr_df,aes(x = pos,y = corr)) + 
 #   geom_point() +
