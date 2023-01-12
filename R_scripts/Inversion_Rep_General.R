@@ -393,7 +393,7 @@ get_breakpoint_indeces <- function(msdata, positions, breakpoints){
     return(c(NA, NA))
   } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
     # if both indeces are duplicated, need to find the pair of columns that are identical
-    comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
+    comparison_indeces <- which(colSums(msdata[,inv_start_index]!=msdata[,inv_end_index])==0)
     if(length(comparison_indeces)==0){
       # if no columns are the same, then flip one of the matrices for the other two comparisons
       inv_start_index <- inv_start_index[c(2,1)]

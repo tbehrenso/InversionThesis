@@ -196,6 +196,8 @@ sfs_2D[max_freq,max_freq] <- 0
 sfs_2D[max_freq,max_freq] <- max(sfs_2D)
 
 sfs_2D_long <- melt(sfs_2D)
+# taking LOG scale (+1 to avoid NA values)
+sfs_2D_long$value <- log10(sfs_2D_long$value + 1)
 
 sfs_2D_plot <- ggplot(sfs_2D_long, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
