@@ -206,6 +206,7 @@ sfs_2D_plot <- ggplot(sfs_2D_long, aes(x=Var1, y=Var2, fill=value)) +
 
 if(on_cluster){
   ggsave('sfs_2D.png', sfs_2D_plot, path=paste("Plots", args[1], args[2], sep="/"), width=20, height=18)
+  save(sfs_2D_long, file=paste("data_summary", args[1], args[2],"sfs_2D_long_LOG.Rds", sep="/"))
 }else{
   print(sfs_2D_plot)
 }
