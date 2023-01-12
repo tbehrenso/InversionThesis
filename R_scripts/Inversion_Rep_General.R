@@ -179,7 +179,7 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
   output <- data.frame(position=centers, average=NA)
   for(i in 1:length(centers)){
     correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
-    output[i, 2] <- mean(correspondingValues)
+    output[i, 2] <- mean(correspondingValues, na.rm=T)
   }
   return(output)
 }
