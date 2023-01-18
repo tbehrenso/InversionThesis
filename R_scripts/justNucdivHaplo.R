@@ -22,8 +22,8 @@ FIXED_MUTATION_POS1 <- 8000
 FIXED_MUTATION_POS2 <- 12000
 INV_START <- 6000
 INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 100
-WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+WINDOW_SPACING <- 200
+WINDOW_SIZE <- 200   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
 
 if(on_cluster){
@@ -145,9 +145,80 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
   output <- data.frame(position=centers, average=NA)
   for(i in 1:length(centers)){
     correspondingValues <- posValData[2][posValData[1] > centers[i]-windowSize & posValData[1] <= centers[i]+windowSize]
-    output[i, 2] <- mean(correspondingValues)
+    output[i, 2] <- mean(correspondingValues, na.rm=T)
   }
   return(output)
+}
+
+get_breakpoint_indeces <- function(msdata, positions, breakpoints){
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2]
+  
+  inv_start_index <- which(positions==inv_start)
+  inv_end_index <- which(positions==inv_end-1)
+  
+  # Fix for multiple mutations at a site
+  # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+  if(length(inv_start_index)>2 | length(inv_end_index)>2){
+    return(c(NA, NA))
+  } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
+    # if both indeces are duplicated, need to find the pair of columns that are identical
+    comparison_indeces <- which(colSums(msdata[,inv_start_index]!=msdata[,inv_end_index])==0)
+    if(length(comparison_indeces)==0){
+      # if no columns are the same, then flip one of the matrices for the other two comparisons
+      inv_start_index <- inv_start_index[c(2,1)]
+    }
+    inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+    inv_end_index <- inv_end_index[comparison_indeces[1]]
+    
+  } else if(length(inv_start_index)>1){
+    # if only one index is duplicated, pick the index that is identical to the ms of the single index
+    # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+    # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+    inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+  } else if(length(inv_end_index)>1){
+    # same as previous else if, but if the end breakpoint is duplicated
+    inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+  }
+  
+  return(c(inv_start_index, inv_end_index))
+}
+
+# separate ms file into two separate ms (outputted as list along with new positions) by haplotype
+# also removes marker mutations
+split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
+  inv_start_index <- indeces[1]
+  inv_end_index <- indeces[2]
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2] - 1
+  
+  ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
+  ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
+  
+  # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+  if(is.null(dim(ms_normal))){
+    ms_normal <- t(as.matrix(ms_normal))
+  }
+  if(is.null(dim(ms_inverted))){
+    ms_inverted <- t(as.matrix(ms_inverted))
+  }
+  
+  # remove marker mutations
+  ms_normal <- ms_normal[,! abs_positions %in% c(inv_start, inv_end)]
+  ms_inverted <- ms_inverted[,! abs_positions %in% c(inv_start, inv_end)]
+  positions_reduced <- abs_positions[! abs_positions %in% c(inv_start, inv_end)]
+  
+  if(is.null(dim(ms_normal))){
+    ms_normal <- t(as.matrix(ms_normal))
+  }
+  if(is.null(dim(ms_inverted))){
+    ms_inverted <- t(as.matrix(ms_inverted))
+  }
+  
+  colnames(ms_normal) <- positions_reduced
+  colnames(ms_inverted) <- positions_reduced
+  
+  return(list(ms_normal, ms_inverted, positions_reduced))
 }
 
 #-----------------------------------------------------------
@@ -192,38 +263,25 @@ for(i in 1:n_files){
   abs_positions <- get_positions(filepath)
   # if at least one sample individual has the inversion
   if(all(c(INV_START, INV_END-1) %in% abs_positions)){
-    inv_start_index <- which(abs_positions==INV_START)
-    inv_end_index <- which(abs_positions==INV_END-1)
     
-    # Fix for multiple mutations at a site
-    # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
-    if(length(inv_start_index)>2 | length(inv_end_index)>2){
+    breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+    
+    inv_start_index <- breakpoint_indeces[1]
+    inv_end_index <- breakpoint_indeces[2]
+    
+    # if both NA, just skip the loop
+    if(all(is.na(breakpoint_indeces))){
       nucdiv_inverted[i,] <- NA
       nucdiv_normal[i,] <- NA
       next
-    } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
-      # if both indeces are duplicated, need to find the pair of columns that are identical
-      comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
-      if(length(comparison_indeces)==0){
-        # if no columns are the same, then flip one of the matrices for the other two comparisons
-        inv_start_index <- inv_start_index[c(2,1)]
-      }
-      inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
-      inv_end_index <- inv_end_index[comparison_indeces[1]]
-      
-    } else if(length(inv_start_index)>1){
-      # if only one index is duplicated, pick the index that is identical to the ms of the single index
-      # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
-      # Index at end is needed if its identical to both, in which case in doesn't matter which to take
-      inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
-    } else if(length(inv_end_index)>1){
-      # same as previous else if, but if the end breakpoint is duplicated
-      inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
     }
     
     # extract ms rows based on presence of inversion markers
-    ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1,]
-    ms_normal <- ms_binary[ms_binary[,inv_start_index]!=1 | ms_binary[,inv_end_index]!=1,]
+    ms_split <- split_ms_by_haplotype(ms_binary, abs_positions, c(INV_START, INV_END), breakpoint_indeces)
+    
+    ms_normal <- ms_split[[1]]
+    ms_inverted <- ms_split[[2]]
+    abs_positions <- ms_split[[3]]
     
     nucdiv_normal_windowed <- calc_nuc_div(ms_normal, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
     nucdiv_inverted_windowed <- calc_nuc_div(ms_inverted, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
@@ -274,7 +332,8 @@ plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=var
 
 
 if(on_cluster){
-  ggsave('nucdiv_haplotypes.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  ggsave('nucdiv_haplotypes_win200.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
+  save(nucdiv_all_long_win200, file=paste("data_summary", args[1], args[2],"nucdiv_all_long_win200.Rds", sep="/"))
 }else{
   # view plots (the ones created with grid.arrange are displayed automatically)
   print(plot_nucdiv_haplotypes)
