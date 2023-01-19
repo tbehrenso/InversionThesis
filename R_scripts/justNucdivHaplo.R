@@ -17,21 +17,22 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 22000
-FIXED_MUTATION_POS1 <- 8000
-FIXED_MUTATION_POS2 <- 12000
-INV_START <- 6000
-INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 200
-WINDOW_SIZE <- 200   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+WINDOW_SPACING <- 100
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
+FIRST_GEN <- 5000  # first generation where inversion/locally adapted alleles are introduced
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.001_mu1e-5_r1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -42,7 +43,7 @@ LAA_PRESENT <- ifelse(simtype=='locallyAdapted' || simtype=='inversionLAA' ,TRUE
 
 # reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
 gglayer_markers <- list(
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red')},
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red', alpha=0.3)},
   {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='solid', colour='blue', alpha=0.4)}
 )
 
@@ -333,7 +334,7 @@ plot_nucdiv_haplotypes <- ggplot(nucdiv_all_long, aes(x=center, y=value, col=var
 
 if(on_cluster){
   ggsave('nucdiv_haplotypes_win200.png', plot_nucdiv_haplotypes, path=paste("Plots", args[1], args[2], sep="/"), width=8, height=6)
-  save(nucdiv_all_long_win200, file=paste("data_summary", args[1], args[2],"nucdiv_all_long_win200.Rds", sep="/"))
+  save(nucdiv_all_long, file=paste("data_summary", args[1], args[2],"nucdiv_all_long_win200.Rds", sep="/"))
 }else{
   # view plots (the ones created with grid.arrange are displayed automatically)
   print(plot_nucdiv_haplotypes)
