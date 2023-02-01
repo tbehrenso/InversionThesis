@@ -408,5 +408,54 @@ if(INVERSION_PRESENT && generation > 5000){
 }
 
 # -----------------------------------------------------
-#     
+#     Overlap some Nucdiv data (original vs added deleterious mutations)
 # -----------------------------------------------------
+
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+WINDOW_SPACING <- 100
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
+FIRST_GEN <- 5000  # first generation where inversion/locally adapted alleles are introduced
+
+# record presence or absence of inversion and locally adapted alleles
+INVERSION_PRESENT <- TRUE
+LAA_PRESENT <- TRUE
+
+# reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
+gglayer_markers <- list(
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red', alpha=0.3)},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='dotted', colour='blue', alpha=0.3)}
+)
+
+loadRData <- function(fileName){
+  #loads an RData file, and returns it
+  load(fileName)
+  get(ls()[ls() != "fileName"])
+}
+
+setwd("C:/Users/tbehr/Desktop")
+
+nucdiv_original <- loadRData("nucdiv_summ_p1_original.Rds")
+nucdiv_deleterious <- loadRData("nucdiv_summ_p1_deleterious.Rds")
+
+min_nucdiv <- 0
+max_nucdiv <- max(c(nucdiv_original$nucdiv, nucdiv_deleterious$nucdiv))
+
+fst_average_all <- data.frame(pos=nucdiv_original$center, original=nucdiv_original$nucdiv, deleterious=nucdiv_deleterious$nucdiv)
+
+fst_average_melt <- melt(fst_average_all, id='pos')
+
+ggplot(fst_average_melt, aes(x=pos, y=value, col=variable)) +
+  geom_line() +
+  ggtitle('Nucleotide Diversity') + 
+  xlab('Position') + ylab('\u03c0') +
+  gglayer_markers
+
+
+
+
+

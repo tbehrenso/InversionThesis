@@ -32,7 +32,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.01_mu1e-5_r1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -300,7 +300,7 @@ get_neutral_frequency <- function(){
   return(overall_neutral_frequency)
 }
 
-# get frequency of locally adapted alleles. 
+# get frequency of locally adapted alleles. --> doesn't work if multiple mutations at a site
 get_allele_frequency <- function(){
   freq_allele1 <- numeric(n_files)
   freq_allele2 <- numeric(n_files)
@@ -388,7 +388,7 @@ get_breakpoint_indeces <- function(msdata, positions, breakpoints){
   inv_end_index <- which(positions==inv_end-1)
   
   # Fix for multiple mutations at a site
-  # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
+  # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is kinda weird. In code, added warnings for when this happens
   if(length(inv_start_index)>2 | length(inv_end_index)>2){
     return(c(NA, NA))
   } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
@@ -451,6 +451,13 @@ split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
   return(list(ms_normal, ms_inverted, positions_reduced))
 }
 
+# function for easily loading and renaming a Rds file. Taken from stackoverflow
+loadRData <- function(fileName){
+  #loads an RData file, and returns it
+  load(fileName)
+  get(ls()[ls() != "fileName"])
+}
+
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
@@ -459,6 +466,8 @@ split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
 files <- list.files(path=PATH, pattern="*.txt", full.names=F, recursive=FALSE)
 n_files <- length(files)
 # pre-calculate window centers' positions
+# Ideally is perfectly divisble so first and last windows lie on the first and last positions of the genome
+if(GENOME_LENGTH%%WINDOW_SPACING){warning("Genome length not divisible by window spacing: Window centers don't fit cleanly")}
 window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 
 # STORAGE DATAFRAMES
@@ -519,6 +528,9 @@ nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_d
 nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_df[which(tags_index$population=='p2'),], na.rm=T),
                              stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
 
+#(FOR JUST ONE REPLCIATE)
+nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = nucdiv_df[which(tags_index$population=='p1'),], stdev=NA)
+
 # find max and min values between both populations to get shared axis
 min_hexp <- min(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
 max_hexp <- max(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
@@ -573,6 +585,8 @@ for(i in 1:n_files){
   if(all(c(INV_START, INV_END-1) %in% abs_positions)){
     
     breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+    if(breakpoint_indeces==c(NA, NA)){
+      warning(paste("More than two mutations at a breakpoint. Did not determine true breakpoint, setting to NA -", filepath))}
     
     inv_start_index <- breakpoint_indeces[1]
     inv_end_index <- breakpoint_indeces[2]
@@ -681,6 +695,8 @@ if(INVERSION_PRESENT && generation > FIRST_GEN){
     abs_positions <- get_positions(filepath)
     
     breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+    if(breakpoint_indeces==c(NA, NA)){
+      warning(paste("More than two mutations at a breakpoint. Did not determine true breakpoint, setting to NA -", filepath))}
     
     inv_start_index <- breakpoint_indeces[1]
     inv_end_index <- breakpoint_indeces[2]
@@ -791,6 +807,8 @@ if(INVERSION_PRESENT && generation > FIRST_GEN){
     
     if(INVERSION_PRESENT && generation > FIRST_GEN){
       breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+      if(breakpoint_indeces==c(NA, NA)){
+        warning(paste("More than two mutations at a breakpoint. Did not determine true breakpoint, setting to NA -", filepath))}
       
       inv_start_index <- breakpoint_indeces[1]
       inv_end_index <- breakpoint_indeces[2]
