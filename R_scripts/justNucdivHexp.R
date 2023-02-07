@@ -32,7 +32,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.01_mu1e-5_r1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -136,7 +136,6 @@ window_centers <- seq(0, GENOME_LENGTH, by=WINDOW_SPACING)
 # STORAGE DATAFRAMES
 tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files), migration=numeric(n_files), 
                          repl=integer(n_files), stringsAsFactors=F)
-pos_frequency <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("pop", "position", "frequency"))
 hexp_red_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 nucdiv_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 frequencies <- matrix(0, nrow=n_files, ncol=length(window_centers))
@@ -151,10 +150,6 @@ for(i in 1:n_files){
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
   
-  # get allele frequencies at all positions
-  pos_frequency_subset <- data.frame(pop=tags[2], position=abs_positions, frequency=colMeans(ms_binary))
-  pos_frequency <- rbind(pos_frequency, pos_frequency_subset)
-  
   # calc hexp at each position, and then a sliding window across the genome
   exp_het <- calc_hexp(ms_binary)
   pos_hexp <- data.frame(position=abs_positions, hexp=exp_het)
@@ -166,11 +161,6 @@ for(i in 1:n_files){
   # calc nucleotide diversity (over sliding window by default)
   nucdiv_windowed <- calc_nuc_div(ms_binary, abs_positions, GENOME_LENGTH, seqLen = WINDOW_SIZE, centerSpacing = WINDOW_SPACING)
   nucdiv_df[i,] <- nucdiv_windowed[[2]]
-  
-  # calc mutation frequency, then sliding window
-  pos_freq <- data.frame(position=abs_positions, freq=colMeans(ms_binary))
-  frequencies_windowed <- calc_sliding_window(pos_freq, GENOME_LENGTH, windowSize = WINDOW_SIZE, pointSpacing = WINDOW_SPACING)
-  frequencies[i,] <- frequencies_windowed[[2]]
   
   # # correlation matrix into a 3D array (third dimension is file index)
   # corr_data <- get_correlations(ms_binary, abs_positions, numTiles = N_TILES)
@@ -192,7 +182,7 @@ nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_d
                              stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
 
 #(FOR JUST ONE REPLCIATE)
-nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = nucdiv_df[which(tags_index$population=='p1'),], stdev=NA)
+#nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = nucdiv_df[which(tags_index$population=='p1'),], stdev=NA)
 
 # find max and min values between both populations to get shared axis
 min_hexp <- min(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
