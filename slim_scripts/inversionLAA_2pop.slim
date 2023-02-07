@@ -72,7 +72,7 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 	
 	p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
 	p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
-	inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add inversions to half of population 1
+	inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add inversions to (some freq of) population 1
 	inverted.addNewDrawnMutation(m3, INV_START);
 	inverted.addNewDrawnMutation(m4, INV_END);
 	inverted.addNewDrawnMutation(m2, 30000);
@@ -83,11 +83,11 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 }
 
 5000:15000 late(){
-	// restart end part of sim (500+) if locally adapted alleles are lost	
+	// restart end part of sim (5000+) if locally adapted alleles are lost	
 	if(sim.countOfMutationsOfType(m2) < 2)
 	{
 		cat(simID + ": LOST – RESTARTING\n");
-		// go back to generation 500
+		// go back to generation 5000
 		sim.readFromPopulationFile(tempdir + "/" + "slim5000_" + simID + ".txt");
 		
 		// reinitialize migration rates
@@ -120,7 +120,7 @@ recombination() {
 		return F;   // Note: Returning F means no change to breakpoints is needed
 	}
 	inInv = (breakpoints > INV_START) & (breakpoints <= INV_END);
-	if (sum(inInv) % 2 == 0) {  // allowing for even number of breakpoints within inversion??
+	if (sum(inInv) % 2 == 0) {  // allowing for even number of breakpoints within inversion
 		return F;
 	}
 	if (gm1 & gm2) {
