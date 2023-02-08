@@ -255,7 +255,7 @@ if(INVERSION_PRESENT && generation > FIRST_GEN){
     
     if(INVERSION_PRESENT && generation > FIRST_GEN){
       breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
-      if(breakpoint_indeces==c(NA, NA)){
+      if(any(is.na(breakpoint_indeces))){
         warning(paste("More than two mutations at a breakpoint. Did not determine true breakpoint, setting to NA -", filepath))}
       
       inv_start_index <- breakpoint_indeces[1]
