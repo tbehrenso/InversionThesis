@@ -83,7 +83,7 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   centers <- seq(0, totalLength, by=centerSpacing)
   # prepare storage for nucleotide diversity at each center position
   output <- data.frame(position=centers, nuc_div=NA)
-  # if only one individual it becomes a vector. If just one individual, cannot calculate nucdiv (or rather, would be all zero)
+  # if only one polymorphic site it becomes a vector. If just one individual, cannot calculate nucdiv (or rather, would be all zero)
   if(is.null(dim(msdata))){
     # msdata <- t(as.matrix(msdata))
     return(output)
@@ -858,9 +858,9 @@ if(INVERSION_PRESENT && generation > FIRST_GEN){
   fst_windowed_p2 <- fst_hudson_windowed_all[tags_index$population=='p2',]
   
   fst_p1_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p1, na.rm = T),
-                               stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
+                               stdev=apply(fst_windowed_p1, 2, sd, na.rm=T))
   fst_p2_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p2, na.rm = T),
-                               stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
+                               stdev=apply(fst_windowed_p2, 2, sd, na.rm=T))
   
   plot_fst_p1 <- ggplot(fst_p1_average, aes(x=pos, y=av_fst)) +
     geom_line()+

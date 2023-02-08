@@ -17,14 +17,15 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 22000
-FIXED_MUTATION_POS1 <- 8000
-FIXED_MUTATION_POS2 <- 12000
-INV_START <- 6000
-INV_END <- 16000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
-WINDOW_SPACING <- 12
-WINDOW_SIZE <- 12   # NOTE: window size is added on each side (so the full size is more like twice this value)
-N_TILES <- 200    # number of tiles along each axis of the correlation heatmap
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+WINDOW_SPACING <- 100
+WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
+N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
+FIRST_GEN <- 5000  # first generation where inversion/locally adapted alleles are introduced
 
 if(on_cluster){
   PATH <- paste("Outputs", args[1], args[2], sep="/")
@@ -155,6 +156,77 @@ calc_nuc_div <- function(msdata, positions, totalLength, seqLen=200, centerSpaci
   return(output)
 }
 
+# get the indeces of the breakpoints in a vector of absolute positions
+# requires the ms data to disentangle when multiple polymorphisms exist at one or both breakpoints
+get_breakpoint_indeces <- function(msdata, positions, breakpoints){
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2]
+  
+  inv_start_index <- which(positions==inv_start)
+  inv_end_index <- which(positions==inv_end-1)
+  
+  # Fix for multiple mutations at a site
+  # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is kinda weird. In code, added warnings for when this happens
+  if(length(inv_start_index)>2 | length(inv_end_index)>2){
+    return(c(NA, NA))
+  } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
+    # if both indeces are duplicated, need to find the pair of columns that are identical
+    comparison_indeces <- which(colSums(msdata[,inv_start_index]!=msdata[,inv_end_index])==0)
+    if(length(comparison_indeces)==0){
+      # if no columns are the same, then flip one of the matrices for the other two comparisons
+      inv_start_index <- inv_start_index[c(2,1)]
+    }
+    inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
+    inv_end_index <- inv_end_index[comparison_indeces[1]]
+    
+  } else if(length(inv_start_index)>1){
+    # if only one index is duplicated, pick the index that is identical to the ms of the single index
+    # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
+    # Index at end is needed if its identical to both, in which case in doesn't matter which to take
+    inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
+  } else if(length(inv_end_index)>1){
+    # same as previous else if, but if the end breakpoint is duplicated
+    inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
+  }
+  
+  return(c(inv_start_index, inv_end_index))
+}
+
+split_ms_by_haplotype <- function(msdata, positions, breakpoints, indeces){
+  inv_start_index <- indeces[1]
+  inv_end_index <- indeces[2]
+  inv_start <- breakpoints[1]
+  inv_end <- breakpoints[2] - 1
+  
+  ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
+  ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
+  
+  # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
+  if(is.null(dim(ms_normal))){
+    ms_normal <- t(as.matrix(ms_normal))
+  }
+  if(is.null(dim(ms_inverted))){
+    ms_inverted <- t(as.matrix(ms_inverted))
+  }
+  
+  # remove marker mutations
+  ms_normal <- ms_normal[,! abs_positions %in% c(inv_start, inv_end)]
+  ms_inverted <- ms_inverted[,! abs_positions %in% c(inv_start, inv_end)]
+  positions_reduced <- abs_positions[! abs_positions %in% c(inv_start, inv_end)]
+  
+  if(is.null(dim(ms_normal))){
+    ms_normal <- t(as.matrix(ms_normal))
+  }
+  if(is.null(dim(ms_inverted))){
+    ms_inverted <- t(as.matrix(ms_inverted))
+  }
+  
+  colnames(ms_normal) <- positions_reduced
+  colnames(ms_inverted) <- positions_reduced
+  
+  return(list(ms_normal, ms_inverted, positions_reduced))
+}
+
 #-----------------------------------------------------------
 # DATA EXTRACTION
 #-----------------------------------------------------------
@@ -170,119 +242,98 @@ tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files
 fst_hudson_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
 nucdiv_df <- matrix(0, nrow=n_files, ncol=length(window_centers))
 
-for(i in 1:n_files){
-  filepath <- paste0(PATH, "/", files[i])
-  ms_binary <- get_ms_data(filepath)
-  abs_positions <- get_positions(filepath)
-  # extract metadata from filename
-  tags <- strsplit(files[i], split='_')[[1]]
-  tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+if(INVERSION_PRESENT && generation > FIRST_GEN){
+  fst_hudson_windowed_all <- matrix(0, nrow=n_files, ncol=length(window_centers))
   
-  if(INVERSION_PRESENT && generation > 5000){
-    inv_start_index <- which(abs_positions==INV_START)
-    inv_end_index <- which(abs_positions==INV_END-1)
+  for(i in 1:n_files){
+    filepath <- paste0(PATH, "/", files[i])
+    ms_binary <- get_ms_data(filepath)
+    abs_positions <- get_positions(filepath)
+    # extract metadata from filename
+    tags <- strsplit(files[i], split='_')[[1]]
+    tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
     
-    # Fix for multiple mutations at a site
-    # this first statement is if there are MORE THAN 2 mutations at a breakpoint, which is really weird. Dunno why thats happening
-    if(length(inv_start_index)>2 | length(inv_end_index)>2){
-      fst_hudson_windowed_all[i,] <- NA
-      next
-    } else if(length(inv_start_index)==2 & length(inv_end_index)==2){
-      # if both indeces are duplicated, need to find the pair of columns that are identical
-      comparison_indeces <- which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)
-      if(length(comparison_indeces)==0){
-        # if no columns are the same, then flip one of the matrices for the other two comparisons
-        inv_start_index <- inv_start_index[c(2,1)]
+    if(INVERSION_PRESENT && generation > FIRST_GEN){
+      breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+      if(breakpoint_indeces==c(NA, NA)){
+        warning(paste("More than two mutations at a breakpoint. Did not determine true breakpoint, setting to NA -", filepath))}
+      
+      inv_start_index <- breakpoint_indeces[1]
+      inv_end_index <- breakpoint_indeces[2]
+      
+      # if both NA, just skip the loop
+      if(all(is.na(breakpoint_indeces))){
+        fst_hudson_windowed_all[i,] <- NA
+        next
       }
-      inv_start_index <- inv_start_index[comparison_indeces[1]]  # this last index is in case all columns are identical
-      inv_end_index <- inv_end_index[comparison_indeces[1]]
       
-    } else if(length(inv_start_index)>1){
-      # if only one index is duplicated, pick the index that is identical to the ms of the single index
-      # works by taking the index of the comparison matrix with sum of zero (ie. no differences). 
-      # Index at end is needed if its identical to both, in which case in doesn't matter which to take
-      inv_start_index <- inv_start_index[which(colSums(ms_binary[,inv_end_index]!=ms_binary[,inv_start_index])==0)[1]]
-    } else if(length(inv_end_index)>1){
-      # same as previous else if, but if the end breakpoint is duplicated
-      inv_end_index <- inv_end_index[which(colSums(ms_binary[,inv_start_index]!=ms_binary[,inv_end_index])==0)[1]]
-    }
-    
-    ms_normal <- ms_binary[ms_binary[,inv_start_index]==0 & ms_binary[,inv_end_index]==0, ]
-    ms_inverted <- ms_binary[ms_binary[,inv_start_index]==1 & ms_binary[,inv_end_index]==1, ]
-    
-    # convert to matrix of one row if the msdata has only one sample (and hence was converted to a vector)
-    if(is.null(dim(ms_normal))){
-      ms_normal <- t(as.matrix(ms_normal))
-    }
-    if(is.null(dim(ms_inverted))){
-      ms_inverted <- t(as.matrix(ms_inverted))
-    }
-    
-    # remove marker mutations
-    ms_normal <- ms_normal[,! abs_positions %in% c(INV_START, INV_END-1)]
-    ms_inverted <- ms_inverted[,! abs_positions %in% c(INV_START, INV_END-1)]
-    abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
-
-    
-    colnames(ms_normal) <- abs_positions
-    colnames(ms_inverted) <- abs_positions
-    
-    normal_is_valid <- TRUE
-    inverted_is_valid <- TRUE
-    
-    if(dim(ms_normal)[1]<=1){
-      normal_is_valid <- FALSE
-    }
-    if(dim(ms_inverted)[1]<=1){
-      inverted_is_valid <- FALSE
-    }
-    if(normal_is_valid & inverted_is_valid){
-      freq_nor <- colMeans(ms_normal)
-      freq_inv <- colMeans(ms_inverted)
-      # n is sample size
-      n_nor <- dim(ms_normal)[[1]]
-      n_inv <- dim(ms_inverted)[[1]]
-      # Hudson estimator for Fst
-      fst_hudson_numerator <- ((freq_nor - freq_inv)^2) - ((freq_nor*(1-freq_nor))/(n_nor-1)) 
-                                                            - ((freq_inv*(1-freq_inv))/(n_inv-1))
-      fst_hudson_demoninator <- (freq_nor*(1-freq_inv)) + (freq_inv*(1-freq_nor))
-      fst_hudson <- data.frame(pos=abs_positions, fst=fst_hudson_numerator / fst_hudson_demoninator)
+      # extract ms rows based on presence of inversion markers
+      ms_split <- split_ms_by_haplotype(ms_binary, abs_positions, c(INV_START, INV_END), breakpoint_indeces)
+      abs_positions <- abs_positions[! abs_positions %in% c(INV_START, INV_END-1)]
       
-      fst_hudson_windowed <- calc_sliding_window(fst_hudson, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
+      ms_normal <- ms_split[[1]]
+      ms_inverted <- ms_split[[2]]
+      positions_reduced <- ms_split[[3]]
       
-      fst_hudson_windowed_all[i,] <- fst_hudson_windowed[[2]]
+      normal_is_valid <- TRUE
+      inverted_is_valid <- TRUE
+      
+      if(dim(ms_normal)[1]<=1){
+        normal_is_valid <- FALSE
+      }
+      if(dim(ms_inverted)[1]<=1){
+        inverted_is_valid <- FALSE
+      }
+      if(normal_is_valid & inverted_is_valid){
+        freq_nor <- colMeans(ms_normal)
+        freq_inv <- colMeans(ms_inverted)
+        # n is sample size
+        n_nor <- dim(ms_normal)[[1]]
+        n_inv <- dim(ms_inverted)[[1]]
+        # Hudson estimator for Fst
+        fst_hudson_numerator <- ((freq_nor - freq_inv)^2) - ((freq_nor*(1-freq_nor))/(n_nor-1)) - ((freq_inv*(1-freq_inv))/(n_inv-1))
+        fst_hudson_demoninator <- (freq_nor*(1-freq_inv)) + (freq_inv*(1-freq_nor))
+        fst_hudson <- data.frame(pos=positions_reduced, fst=fst_hudson_numerator / fst_hudson_demoninator)
+        
+        fst_hudson_windowed <- calc_sliding_window(fst_hudson, GENOME_LENGTH, WINDOW_SIZE, WINDOW_SPACING)
+        
+        fst_hudson_windowed_all[i,] <- fst_hudson_windowed[[2]]
+      }
     }
   }
+  
+  fst_windowed_p1 <- fst_hudson_windowed_all[tags_index$population=='p1',]
+  fst_windowed_p2 <- fst_hudson_windowed_all[tags_index$population=='p2',]
+  
+  fst_p1_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p1, na.rm = T),
+                               stdev=apply(fst_windowed_p1, 2, sd, na.rm=T))
+  fst_p2_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p2, na.rm = T),
+                               stdev=apply(fst_windowed_p2, 2, sd, na.rm=T))
+  
+  plot_fst_p1 <- ggplot(fst_p1_average, aes(x=pos, y=av_fst)) +
+    geom_line()+
+    scale_fill_gradient(low='white', high='blue') +
+    ggtitle('P1 - Between Haplotypes') +
+    xlab('Position') + ylab(expression(F[ST])) +
+    gglayer_markers
+  
+  plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
+    geom_line() +
+    scale_fill_gradient(low='white', high='blue') +
+    ggtitle('P2 - Between Haplotypes') +
+    xlab('Position') + ylab(expression(F[ST])) +
+    gglayer_markers
+  
+  plot_fst_hudson <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
+  
+  if(on_cluster){
+    #ggsave('fst_hudson_win100.png', plot_fst_hudson, device="png", path=paste("Plots", args[1], args[2], sep="/"), width=20, height=8)
+    save(fst_p1_average, file=paste("data_summary", args[1], args[2],"fst_p1_average_FIXED.Rds", sep="/"))
+    save(fst_p2_average, file=paste("data_summary", args[1], args[2],"fst_p2_average_FIXED.Rds", sep="/"))
+  }else{
+    print(plot_fst_hudson)
+  }
 }
-
-
-
-fst_windowed_p1 <- fst_hudson_windowed_all[tags_index$population=='p1',]
-fst_windowed_p2 <- fst_hudson_windowed_all[tags_index$population=='p2',]
-
-fst_p1_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p1, na.rm = T),
-                             stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
-fst_p2_average <- data.frame(pos=window_centers, av_fst=colMeans(fst_windowed_p2, na.rm = T),
-                             stdev=apply(fst_hudson_windowed_all, 2, sd, na.rm=T))
-
-plot_fst_p1 <- ggplot(fst_p1_average, aes(x=pos, y=av_fst)) +
-  geom_line()+
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P1 - Between Haplotypes') +
-  xlab('Position') + ylab(expression(F[ST])) +
-  gglayer_markers
-
-plot_fst_p2 <- ggplot(fst_p2_average, aes(x=pos, y=av_fst)) +
-  geom_line() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P2 - Between Haplotypes') +
-  xlab('Position') + ylab(expression(F[ST])) +
-  gglayer_markers
-
-plot_fst_hudson <- grid.arrange(plot_fst_p1, plot_fst_p2, nrow=1)
-
-ggsave('fst_hudson_win12_nomarkers.png', plot_fst_hudson, path=paste("Plots", args[1], args[2], sep="/"), width=16, height=5.5)
-
 
 
 
