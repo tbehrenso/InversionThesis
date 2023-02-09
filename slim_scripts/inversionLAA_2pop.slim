@@ -8,8 +8,8 @@ initialize() {
 	//defineConstant("rep", 1);
 	//defineConstant("rec", 1e-6);
 	
-	defineConstant("L", 120000);
-	defineConstant("INV_LENGTH", 100000);     // set inversion to be centered on the genome
+	defineConstant("L", 12000);
+	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
 	defineConstant("INV_START", asInteger(L/2 - INV_LENGTH/2));
 	defineConstant("INV_END", INV_START + INV_LENGTH - 1);
 	defineConstant("ALLELE_STARTING_FREQ", 50);
@@ -75,8 +75,8 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 	inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add inversions to (some freq of) population 1
 	inverted.addNewDrawnMutation(m3, INV_START);
 	inverted.addNewDrawnMutation(m4, INV_END);
-	inverted.addNewDrawnMutation(m2, 30000);
-	inverted.addNewDrawnMutation(m2, 70000);
+	inverted.addNewDrawnMutation(m2, 3000);
+	inverted.addNewDrawnMutation(m2, 7000);
 }
 
 6000 late() {
@@ -101,8 +101,8 @@ fitness(m2, p2)   // different fitness effect of m2 on p2
 		inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);
 		inverted.addNewDrawnMutation(m3, INV_START);
 		inverted.addNewDrawnMutation(m4, INV_END);
-		inverted.addNewDrawnMutation(m2, 30000);
-		inverted.addNewDrawnMutation(m2, 70000);
+		inverted.addNewDrawnMutation(m2, 3000);
+		inverted.addNewDrawnMutation(m2, 7000);
 	}
 	// create output every 100 generations	
 	if (any(sim.generation == c(6:15)*1000)) {
