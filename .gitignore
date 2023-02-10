@@ -4,6 +4,7 @@
 *.docx
 *.pdf
 *.pptx
+*.tmp
 
 /Outputs
 /Plots
