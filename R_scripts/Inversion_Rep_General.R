@@ -32,7 +32,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.01_mu1e-5_r1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -529,7 +529,7 @@ nucdiv_summ_p2 <- data.frame(center = window_centers, nucdiv = colMeans(nucdiv_d
                              stdev=apply(nucdiv_df[which(tags_index$population=='p2'),], 2, sd, na.rm=T))
 
 #(FOR JUST ONE REPLCIATE)
-nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = nucdiv_df[which(tags_index$population=='p1'),], stdev=NA)
+#nucdiv_summ_p1 <- data.frame(center = window_centers, nucdiv = nucdiv_df[which(tags_index$population=='p1'),], stdev=NA)
 
 # find max and min values between both populations to get shared axis
 min_hexp <- min(hexp_summ_p1$hexp, hexp_summ_p2$hexp)
