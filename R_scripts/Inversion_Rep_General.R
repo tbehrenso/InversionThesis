@@ -17,11 +17,11 @@ library(tidyr)
 # PARAMETERS
 #-----------------------------------------------------------
 
-GENOME_LENGTH <- 12000
-FIXED_MUTATION_POS1 <- 3000
-FIXED_MUTATION_POS2 <- 7000
-INV_START <- 1000
-INV_END <- 11000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
+GENOME_LENGTH <- 120000
+FIXED_MUTATION_POS1 <- 30000
+FIXED_MUTATION_POS2 <- 70000
+INV_START <- 10000
+INV_END <- 110000  # this value should NOT be the '-1' value that the SLiM script uses. This script does that correction later
 WINDOW_SPACING <- 100
 WINDOW_SIZE <- 100   # NOTE: window size is added on each side (so the full size is more like twice this value)
 N_TILES <- 600   # number of tiles along each axis of the correlation heatmap
