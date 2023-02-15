@@ -32,7 +32,7 @@ if(on_cluster){
   simtype <- strsplit(args[1], split='_')[[1]][1]
   generation <- as.integer(args[2])
 }else{
-  PATH <- "Outputs/inversionLAA_2pop_s0.01_m0.001_mu1e-6/15000"
+  PATH <- "Outputs/inversionLAA_2pop_s0.1_m0.01_mu1e-5_r1e-6/15000"
   simtype <- strsplit(strsplit(PATH, split='/')[[1]][2], split='_')[[1]][1]
   generation <- as.integer(strsplit(PATH, split='/')[[1]][3])
 }
@@ -78,89 +78,6 @@ calc_sliding_window <- function(posValData, totalLength, windowSize, pointSpacin
     output[i, 2] <- mean(correspondingValues, na.rm=T)
   }
   return(output)
-}
-
-# Getting average (and SD) number of polymorphic sites. 
-get_average_polymorphism_count <- function(){
-  polymorphism_counts <- numeric(n_files)
-  
-  for(i in 1:n_files){
-    filepath <- paste0(PATH, "/", files[i])
-    abs_positions <- get_positions(filepath)
-    
-    polymorphism_counts[i] <- length(abs_positions)
-    average <- mean(polymorphism_counts)
-    stdev <- sd(polymorphism_counts)
-  }
-  print(paste('Polymorphism Count - Mean:', average, 'SD:', stdev))
-}
-
-# INVERSION FREQUENCIES      ---> can make generic to take any two (or set) of positions
-get_inversion_frequencies <- function(){
-  freq_all <- numeric(n_files)
-  for(i in 1:n_files){
-    filepath <- paste0(PATH, "/", files[i])
-    ms_binary <- get_ms_data(filepath)
-    abs_positions <- get_positions(filepath)
-    
-    if(all(c(INV_START, INV_END-1) %in% abs_positions)){
-      inv_start_index <- which(abs_positions==INV_START)
-      inv_start_index <- inv_start_index[1] ##### TEMPORARY: TO "FIX" MULTIPLE MUTATIONS AT A SITE
-      inv_end_index <- which(abs_positions==INV_END-1)
-      inv_end_index <- inv_end_index[1]  ##### TEMPORARY: TO "FIX" MULTIPLE MUTATIONS AT A SITE
-      
-      freq_all[i] <- mean(ms_binary[,inv_start_index])
-    }
-  }
-  
-  inv_freq_p1 <- mean(freq_all[tags_index$population=='p1'])
-  inv_freq_p2 <- mean(freq_all[tags_index$population=='p2'])
-  print(paste('P1 Frequency:', inv_freq_p1))
-  print(paste('P2 Frequency:', inv_freq_p2))
-  return(c(inv_freq_p1, inv_freq_p2))
-}
-
-# # get frequency of neutral alleles (only does mean, haven't implemented standard deviation)
-# get_neutral_frequency <- function(){
-#   neutral_frequencies <- matrix(0, nrow = n_files, ncol = 2)
-#   for(i in 1:n_files){
-#     filepath <- paste0(PATH, "/", files[i])
-#     ms_binary <- get_ms_data(filepath)
-#     abs_positions <- get_positions(filepath)
-#     
-#     ms_neutrals <- ms_binary[,!(abs_positions %in% c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2, INV_START, INV_END-1))]
-#     neutral_frequencies[i, 1] <- mean(ms_neutrals)
-#     neutral_frequencies[i, 2] <- dim(ms_neutrals)[2]
-#   }
-#   overall_neutral_frequency <- sum(apply(neutral_frequencies, 1, prod) / sum(neutral_frequencies[,2]))
-#   return(overall_neutral_frequency)
-# }
-
-# get frequency of locally adapted alleles. --> doesn't work if multiple mutations at a site
-get_allele_frequency <- function(){
-  freq_allele1 <- numeric(n_files)
-  freq_allele2 <- numeric(n_files)
-  for(i in 1:n_files){
-    filepath <- paste0(PATH, "/", files[i])
-    ms_binary <- get_ms_data(filepath)
-    abs_positions <- get_positions(filepath)
-    
-    if(FIXED_MUTATION_POS1 %in% abs_positions){
-      freq_allele1[i] <- mean(ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)])
-    }
-    if(FIXED_MUTATION_POS2 %in% abs_positions){
-      freq_allele2[i] <- mean(ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)])
-    }
-  }
-  allele1_freq_p1 <- mean(freq_allele1[tags_index$population=='p1'])
-  allele1_freq_p2 <- mean(freq_allele1[tags_index$population=='p2'])
-  allele2_freq_p1 <- mean(freq_allele2[tags_index$population=='p1'])
-  allele2_freq_p2 <- mean(freq_allele2[tags_index$population=='p2'])
-  
-  print(paste('P1 Allele1 Frequency:', allele1_freq_p1))
-  print(paste('P1 Allele2 Frequency:', allele2_freq_p1))
-  print(paste('P2 Allele1 Frequency:', allele1_freq_p2))
-  print(paste('P2 Allele2 Frequency:', allele2_freq_p2))
 }
 
 # get the indeces of the breakpoints in a vector of absolute positions
@@ -254,6 +171,9 @@ tags_index <- data.frame(population=character(n_files), sel_coef=numeric(n_files
 pos_frequency <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("pop", "position", "frequency"))
 frequencies <- matrix(0, nrow=n_files, ncol=length(window_centers))
 neutral_frequencies <- matrix(0, nrow = n_files, ncol = 2)
+freq_allele1 <- numeric(n_files)
+freq_allele2 <- numeric(n_files)
+inv_freq_all <- numeric(n_files)
 # correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))  # NOTE: end up switching a lot between long and wide here
 #      maybe change so its all in long?
 
@@ -264,6 +184,8 @@ for(i in 1:n_files){
   # extract metadata from filename
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
+  
+  breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
   
   # get allele frequencies at all positions
   pos_frequency_subset <- data.frame(pop=tags[2], position=abs_positions, frequency=colMeans(ms_binary))
@@ -278,12 +200,45 @@ for(i in 1:n_files){
   neutral_frequencies[i, 1] <- mean(ms_neutrals)
   neutral_frequencies[i, 2] <- dim(ms_neutrals)[2]
   
-  # # correlation matrix into a 3D array (third dimension is file index)
-  # corr_data <- get_correlations(ms_binary, abs_positions, numTiles = N_TILES)
-  # corr_long <- reduce_to_long(corr_data, abs_positions, numTiles = N_TILES)
-  # correlations_3d[,,i] <- as.matrix(dcast(corr_long, Var1 ~ Var2)[,-1]) # exclude first column (variable names)
+  if(FIXED_MUTATION_POS1 %in% abs_positions){
+    freq_allele1[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS1), n=1)])  # tail() is in case there are multiple mutations at a site
+  }
+  if(FIXED_MUTATION_POS2 %in% abs_positions){
+    freq_allele2[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS2), n=1)])
+  }
+  
+  polymorphism_counts <- numeric(n_files)
+
+  inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
 }
 
 
 overall_neutral_frequency <- sum(apply(neutral_frequencies, 1, prod) / sum(neutral_frequencies[,2]))
+
+# mean allele frequency 
+allele1_freq_p1 <- mean(freq_allele1[tags_index$population=='p1'], na.rm=T)
+allele1_freq_p2 <- mean(freq_allele1[tags_index$population=='p2'], na.rm=T)
+allele2_freq_p1 <- mean(freq_allele2[tags_index$population=='p1'], na.rm=T)
+allele2_freq_p2 <- mean(freq_allele2[tags_index$population=='p2'], na.rm=T)
+
+# polymorphism count
+average_polymorphism_count <- mean(polymorphism_counts)
+stdev_polymorphism_count <- sd(polymorphism_counts)
+
+# inversion frequency
+inv_freq_p1 <- mean(inv_freq_all[tags_index$population=='p1'], na.rm=T)
+inv_freq_p2 <- mean(inv_freq_all[tags_index$population=='p2'], na.rm=T)
+inv_stdev_p1 <- sd(inv_freq_all[tags_index$population=='p1'], na.rm=T)
+inv_stdev_p2 <- sd(inv_freq_all[tags_index$population=='p2'], na.rm=T)
+
+print(paste("Overall neutral frequency:", overall_neutral_frequency))
+print(paste("Average polymorphism count:", average_polymorphism_count))
+print(paste("STdev polymorphism count:", stdev_polymorphism_count))
+print(paste("LAA 1 Freq, P1:", allele1_freq_p1))
+print(paste("LAA 2 Freq, P1:", allele2_freq_p1))
+print(paste("LAA 1 Freq, P2:", allele1_freq_p2))
+print(paste("LAA 2 Freq, P2:", allele2_freq_p2))
+print(paste("Inversion Freq P1:", inv_freq_p1, "with SD:", inv_stdev_p1))
+print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2))
+
 
