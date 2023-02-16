@@ -174,6 +174,7 @@ neutral_frequencies <- matrix(0, nrow = n_files, ncol = 2)
 freq_allele1 <- numeric(n_files)
 freq_allele2 <- numeric(n_files)
 inv_freq_all <- numeric(n_files)
+polymorphism_counts <- numeric(n_files)
 # correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))  # NOTE: end up switching a lot between long and wide here
 #      maybe change so its all in long?
 
@@ -207,7 +208,7 @@ for(i in 1:n_files){
     freq_allele2[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS2), n=1)])
   }
   
-  polymorphism_counts <- numeric(n_files)
+  polymorphism_counts[i] <- length(abs_positions)
 
   inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
 }
