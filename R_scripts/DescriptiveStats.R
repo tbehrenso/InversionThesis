@@ -230,10 +230,13 @@ stdev_polymorphism_count <- sd(polymorphism_counts)
 
 # inversion frequency
 if(INVERSION_PRESENT){
-inv_freq_p1 <- mean(inv_freq_all[tags_index$population=='p1'], na.rm=T)
-inv_freq_p2 <- mean(inv_freq_all[tags_index$population=='p2'], na.rm=T)
-inv_stdev_p1 <- sd(inv_freq_all[tags_index$population=='p1'], na.rm=T)
-inv_stdev_p2 <- sd(inv_freq_all[tags_index$population=='p2'], na.rm=T)
+  inv_freq_p1 <- mean(inv_freq_all[tags_index$population=='p1'], na.rm=T)
+  inv_freq_p2 <- mean(inv_freq_all[tags_index$population=='p2'], na.rm=T)
+  inv_stdev_p1 <- sd(inv_freq_all[tags_index$population=='p1'], na.rm=T)
+  inv_stdev_p2 <- sd(inv_freq_all[tags_index$population=='p2'], na.rm=T)
+  
+  # TEMP LINE TO SEE THE NUMBERS THE MEAN COMES FROM
+  print(inv_freq_all[tags_index$population=='p1'])
 }
 
 print(paste("Overall neutral frequency:", overall_neutral_frequency))
@@ -245,5 +248,4 @@ print(paste("LAA 1 Freq, P2:", allele1_freq_p2))
 print(paste("LAA 2 Freq, P2:", allele2_freq_p2))
 print(paste("Inversion Freq P1:", inv_freq_p1, "with SD:", inv_stdev_p1))
 print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2))
-
 
