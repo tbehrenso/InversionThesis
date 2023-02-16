@@ -186,7 +186,10 @@ for(i in 1:n_files){
   tags <- strsplit(files[i], split='_')[[1]]
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
   
-  breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+  if(INVERSION_PRESENT){
+    breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
+    inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
+  }
   
   # get allele frequencies at all positions
   pos_frequency_subset <- data.frame(pop=tags[2], position=abs_positions, frequency=colMeans(ms_binary))
@@ -210,7 +213,6 @@ for(i in 1:n_files){
   
   polymorphism_counts[i] <- length(abs_positions)
 
-  inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
 }
 
 
@@ -227,10 +229,12 @@ average_polymorphism_count <- mean(polymorphism_counts)
 stdev_polymorphism_count <- sd(polymorphism_counts)
 
 # inversion frequency
+if(INVERSION_PRESENT){
 inv_freq_p1 <- mean(inv_freq_all[tags_index$population=='p1'], na.rm=T)
 inv_freq_p2 <- mean(inv_freq_all[tags_index$population=='p2'], na.rm=T)
 inv_stdev_p1 <- sd(inv_freq_all[tags_index$population=='p1'], na.rm=T)
 inv_stdev_p2 <- sd(inv_freq_all[tags_index$population=='p2'], na.rm=T)
+}
 
 print(paste("Overall neutral frequency:", overall_neutral_frequency))
 print(paste("Average polymorphism count:", average_polymorphism_count))
