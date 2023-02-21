@@ -232,9 +232,13 @@ overall_neutral_frequency <- sum(apply(neutral_frequencies, 1, prod) / sum(neutr
 
 # mean allele frequency 
 allele1_freq_p1 <- mean(freq_allele1[tags_index$population=='p1'], na.rm=T)
+allele1_sd_p1 <- sd(freq_allele1[tags_index$population=='p1'], na.rm=T)
 allele1_freq_p2 <- mean(freq_allele1[tags_index$population=='p2'], na.rm=T)
+allele1_sd_p2 <- sd(freq_allele1[tags_index$population=='p2'], na.rm=T)
 allele2_freq_p1 <- mean(freq_allele2[tags_index$population=='p1'], na.rm=T)
+allele2_sd_p1 <- sd(freq_allele2[tags_index$population=='p1'], na.rm=T)
 allele2_freq_p2 <- mean(freq_allele2[tags_index$population=='p2'], na.rm=T)
+allele2_freq_p2 <- sd(freq_allele2[tags_index$population=='p2'], na.rm=T)
 
 # polymorphism count
 average_polymorphism_count <- mean(polymorphism_counts)
@@ -254,10 +258,10 @@ if(INVERSION_PRESENT){
 print(paste("Overall neutral frequency:", overall_neutral_frequency))
 print(paste("Average polymorphism count:", average_polymorphism_count))
 print(paste("STdev polymorphism count:", stdev_polymorphism_count))
-print(paste("LAA 1 Freq, P1:", allele1_freq_p1))
-print(paste("LAA 2 Freq, P1:", allele2_freq_p1))
-print(paste("LAA 1 Freq, P2:", allele1_freq_p2))
-print(paste("LAA 2 Freq, P2:", allele2_freq_p2))
+print(paste("LAA 1 Freq, P1:", allele1_freq_p1, "with SD:", allele1_sd_p1))
+print(paste("LAA 2 Freq, P1:", allele2_freq_p1, "with SD:", allele2_sd_p1))
+print(paste("LAA 1 Freq, P2:", allele1_freq_p2, "with SD:", allele1_sd_p2))
+print(paste("LAA 2 Freq, P2:", allele2_freq_p2, "with SD:", allele2_sd_p2))
 print(paste("Inversion Freq P1:", inv_freq_p1, "with SD:", inv_stdev_p1))
 print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2))
 
