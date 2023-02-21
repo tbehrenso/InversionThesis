@@ -1,0 +1,153 @@
+// Keywords: 
+
+initialize() {
+	// For testing: variable definitions
+	defineConstant("mu", 1e-5);
+	defineConstant("s", 0.01);
+	defineConstant("m", 0.001);
+	defineConstant("rep", 1);
+	defineConstant("rec", 1e-6);
+	
+	defineConstant("L", 12000);
+	defineConstant("INV_LENGTH", 10000);     // set inversion to be centered on the genome
+	defineConstant("INV_START", asInteger(L/2 - INV_LENGTH/2));
+	defineConstant("INV_END", INV_START + INV_LENGTH - 1);
+	defineConstant("ALLELE_STARTING_FREQ", 50);
+	
+	initializeMutationRate(mu);
+	initializeMutationType("m1", 0.5, "f", 0.0); // neutral sites
+	initializeMutationType("m2", 0.5, "f", s);  // beneficial by default (p1)
+	initializeMutationType("m3", 0.5, "f", 0.0); // start marker
+	initializeMutationType("m4", 0.5, "f", 0.0); // end marker
+	// (below) deleterious mutation with gamma distributed fitness effects
+	initializeMutationType("m5", 0.5, "g", -0.01, 0.1); // mean=-0.01, shape=0.1
+	c(m3,m4).convertToSubstitution = T;
+	c(m3,m4).color = "red";
+	
+	initializeGenomicElementType("g1", c(m1,m5), c(9,1)); // ratio of 9:1 for m1:m5 (ie. 10% deleterious)
+	//initializeGenomicElementType("g2", m2, 1.0);	
+	m1.convertToSubstitution = F;
+	m2.convertToSubstitution = F;
+	initializeGenomicElement(g1, 0, INV_START-1);
+	initializeGenomicElement(g1, INV_START+1, 3000-1);
+	initializeGenomicElement(g1, 3000+1, 7000-1);
+	initializeGenomicElement(g1, 7000+1, INV_END-1);
+	initializeGenomicElement(g1, INV_END+1, L-1);
+	initializeRecombinationRate(rec);
+	
+	m1.mutationStackGroup = -1;   // to make sure separate mutations do not stack at a site
+	m1.mutationStackPolicy = "f";
+	m2.mutationStackGroup = -1;
+	m2.mutationStackPolicy = "f";
+	// including stack policy for marker mutations. Does not allow true mutations at
+	// those positions, but in output cannot distinguish between them	
+	m3.mutationStackGroup = -1;
+	m3.mutationStackPolicy = "f";
+	m4.mutationStackGroup = -1;
+	m4.mutationStackPolicy = "f";
+	m5.mutationStackGroup = -1;
+	m5.mutationStackPolicy = "f";
+}
+1 late() {
+	defineConstant("simID", getSeed());
+	
+	sim.addSubpop("p1", 1000);
+	sim.addSubpop("p2", 1000);
+	p1.setMigrationRates(p2, m);  // migration rate of p2 into p1
+	p2.setMigrationRates(p1, m);
+
+}
+fitness(m2, p2)   // different fitness effect of m2 on p2
+{
+	s2 = (1.0/(1.0+s)-1.0);
+	if (homozygous)
+		return 1.0 + s2;
+	else
+		return 1.0 + s2/2;
+}
+
+1:5000 late() {
+
+}
+
+5000 late() {
+	// save the state of the simulation (for looping back to)
+	//sim.outputFull(tempdir + "/" + "slim5000_" + simID + ".txt");
+	
+	mOne = sim.mutationsOfType(m1);
+	for (siteToRemove in c(INV_START, INV_END, 3000, 7000))
+	{
+		mOneAtSites = mOne[mOne.position == siteToRemove];
+		p1.genomes.removeMutations(mOneAtSites);
+		p2.genomes.removeMutations(mOneAtSites);
+	}		
+
+	
+	//p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+	//p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/5000/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);  // add inversions to (some freq of) population 1
+	inverted.addNewDrawnMutation(m3, INV_START);
+	inverted.addNewDrawnMutation(m4, INV_END);
+	inverted.addNewDrawnMutation(m2, 3000);
+	inverted.addNewDrawnMutation(m2, 7000);
+		
+}
+
+6000 late() {
+}
+
+5000:15000 late(){
+	// restart end part of sim (5000+) if locally adapted alleles are lost	
+	if(sim.countOfMutationsOfType(m2) < 2)
+	{
+		cat(simID + ": LOST – RESTARTING\n");
+		// go back to generation 5000
+		//sim.readFromPopulationFile(tempdir + "/" + "slim5000_" + simID + ".txt");
+		
+		// reinitialize migration rates
+		p1.setMigrationRates(p2, m);
+		p2.setMigrationRates(p1, m);
+		
+		// start a newly seeded run
+		setSeed(rdunif(1, 0, asInteger(2^62) - 1));
+		
+		// re-introduce the sweep mutation
+		inverted = sample(p1.genomes, ALLELE_STARTING_FREQ);
+		inverted.addNewDrawnMutation(m3, INV_START);
+		inverted.addNewDrawnMutation(m4, INV_END);
+		inverted.addNewDrawnMutation(m2, 3000);
+		inverted.addNewDrawnMutation(m2, 7000);
+	}
+	// create output every 100 generations	
+	if (any(sim.generation == c(6:15)*1000)) {
+		//p1.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p1", "_", s, "_", m, "_", rep, "_", ".txt")));
+		//p2.outputMSSample(200, replace=F, filePath=paste0(c("Outputs/", dir_name, "/", sim.generation, "/linkage2P_p2", "_", s, "_", m, "_", rep, "_", ".txt")));
+	}
+}
+
+
+recombination() {
+	gm1 = genome1.containsMarkerMutation(m3, INV_START);
+	gm2 = genome2.containsMarkerMutation(m3, INV_START);
+	if (!(gm1 | gm2)) {
+		// homozygote non-inverted
+		return F;   // Note: Returning F means no change to breakpoints is needed
+	}
+	inInv = (breakpoints > INV_START) & (breakpoints <= INV_END);
+	if (sum(inInv) % 2 == 0) {  // allowing for even number of breakpoints within inversion
+		return F;
+	}
+	if (gm1 & gm2) {
+		// homozygote inverted
+		left = (breakpoints == INV_START);
+		right = (breakpoints == INV_END + 1);
+		breakpoints = sort(c(breakpoints[!(left | right)],
+			c(INV_START, INV_END + 1)[c(sum(left) == 0, sum(right) == 0)]));
+		return T;
+	} else {
+		// heterozygote inverted: resample to get an even # of breakpoints
+		// this is *recursive*: it calls this recombination callback again!
+		breakpoints = sim.chromosome.drawBreakpoints(individual);
+	}
+	return T;
+} 

@@ -205,11 +205,23 @@ for(i in 1:n_files){
   neutral_frequencies[i, 2] <- dim(ms_neutrals)[2]
   
   if(FIXED_MUTATION_POS1 %in% abs_positions){
-    freq_allele1[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS1), n=1)])  # tail() is in case there are multiple mutations at a site
+    #freq_allele1[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS1), n=1)])  # tail() is in case there are multiple mutations at a site
+    if(length(which(abs_positions==FIXED_MUTATION_POS1))==1){
+      freq_allele1[i] <- mean(ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)])
+    } else {
+      freq_allele1[i] <- NA
+    }
   }
   if(FIXED_MUTATION_POS2 %in% abs_positions){
-    freq_allele2[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS2), n=1)])
+    #freq_allele2[i] <- mean(ms_binary[,tail(which(abs_positions==FIXED_MUTATION_POS2), n=1)])
+    if(length(which(abs_positions==FIXED_MUTATION_POS2))==1){
+      freq_allele2[i] <- mean(ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)])
+    } else {
+      freq_allele2[i] <- NA
+    }
   }
+  
+  
   
   polymorphism_counts[i] <- length(abs_positions)
 

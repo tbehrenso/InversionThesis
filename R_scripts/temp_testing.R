@@ -276,12 +276,19 @@ y = dgamma(x,shape = shape,scale=scale)
 plot(x,y,type='l',log='x')
 
 
+# -----------------------------------
+#  Histogram of Inversion Frequencies
+# -----------------------------------
 
+# (for invLAA, Pop1)
+original_string <- "0.895 0.940 0.895 0.820 0.855 0.915 0.925 0.870 0.230 0.925 0.575 0.600 0.885 0.930 0.805 0.850 0.870 0.920 0.935 0.925 0.925 0.925 0.915 0.895 
+0.890 0.895 0.890 0.950 0.900 0.830 NA 0.905 0.830 0.860 0.940 0.880 0.925 0.945 0.915 0.935 0.850 0.840 0.915 0.920 0.840 0.875 0.945 0.925 0.895 0.955"
 
+numeric_vect <- as.numeric(unlist(strsplit(original_string, " ")))
 
+filtered_vect <- numeric_vect[numeric_vect>0.8]
 
-
-
+hist(filtered_vect)
 
 
 
