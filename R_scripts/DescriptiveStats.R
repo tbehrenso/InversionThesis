@@ -175,6 +175,7 @@ freq_allele1 <- numeric(n_files)
 freq_allele2 <- numeric(n_files)
 inv_freq_all <- numeric(n_files)
 polymorphism_counts <- numeric(n_files)
+LAA_correlation_all <- numeric(n_files)
 # correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))  # NOTE: end up switching a lot between long and wide here
 #      maybe change so its all in long?
 
@@ -225,6 +226,14 @@ for(i in 1:n_files){
   
   polymorphism_counts[i] <- length(abs_positions)
 
+  
+  # correlation between LAA
+  if(LAA_PRESENT & length(which(abs_positions==FIXED_MUTATION_POS1))==1 & length(which(abs_positions==FIXED_MUTATION_POS2))==1){
+    LAA_correlation_all[i] <- cor(ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)], ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)])
+  } else {
+    LAA_correlation_all[i] <- NA
+  }
+  
 }
 
 
@@ -255,6 +264,11 @@ if(INVERSION_PRESENT){
   print(inv_freq_all[tags_index$population=='p1'])
 }
 
+
+LAA_mean_correlation <- mean(LAA_correlation_all, na.rm=T)
+LAA_sd_correlation <- sd(LAA_correlation_all, na.rm=T)
+
+
 print(paste("Overall neutral frequency:", overall_neutral_frequency))
 print(paste("Average polymorphism count:", average_polymorphism_count))
 print(paste("STdev polymorphism count:", stdev_polymorphism_count))
@@ -264,4 +278,4 @@ print(paste("LAA 1 Freq, P2:", allele1_freq_p2, "with SD:", allele1_sd_p2))
 print(paste("LAA 2 Freq, P2:", allele2_freq_p2, "with SD:", allele2_sd_p2))
 print(paste("Inversion Freq P1:", inv_freq_p1, "with SD:", inv_stdev_p1))
 print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2))
-
+print(paste("LAA Corr:", LAA_mean_correlation, "with SD:", LAA_sd_correlation))
