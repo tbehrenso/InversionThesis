@@ -188,8 +188,14 @@ for(i in 1:n_files){
   tags_index[i,] <- list(tags[2], as.numeric(tags[3]), as.numeric(tags[4]), as.integer(tags[5]))
   
   if(INVERSION_PRESENT){
-    breakpoint_indeces <- get_breakpoint_indeces(ms_binary, abs_positions, c(INV_START, INV_END))
-    inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
+    inv_start_index <- which(abs_positions==INV_START)
+    inv_end_index <- which(abs_positions==INV_END-1)
+    
+    if(length(inv_start_index)>1 | length(inv_end_index)>1){
+      inv_freq_all[i] <- NA
+    } else {
+      inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
+    }
   }
   
   # get allele frequencies at all positions
@@ -260,8 +266,11 @@ if(INVERSION_PRESENT){
   inv_stdev_p1 <- sd(inv_freq_all[tags_index$population=='p1'], na.rm=T)
   inv_stdev_p2 <- sd(inv_freq_all[tags_index$population=='p2'], na.rm=T)
   
+  inv_n_p1 <- sum(!is.na(inv_freq_all[tags_index$population=='p1']))
+  inv_n_p2 <- sum(!is.na(inv_freq_all[tags_index$population=='p2']))
+  
   # TEMP LINE TO SEE THE NUMBERS THE MEAN COMES FROM
-  print(inv_freq_all[tags_index$population=='p1'])
+  #print(inv_freq_all[tags_index$population=='p1'])
 }
 
 
@@ -277,7 +286,7 @@ print(paste("LAA 2 Freq, P1:", allele2_freq_p1, "with SD:", allele2_sd_p1))
 print(paste("LAA 1 Freq, P2:", allele1_freq_p2, "with SD:", allele1_sd_p2))
 print(paste("LAA 2 Freq, P2:", allele2_freq_p2, "with SD:", allele2_sd_p2))
 if(INVERSION_PRESENT){
-  print(paste("Inversion Freq P1:", inv_freq_p1, "with SD:", inv_stdev_p1))
-  print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2))
+  print(paste("Inversion Freq P1:", inv_freq_p1, "with SD:", inv_stdev_p1, "from n=", inv_n_p1))
+  print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2, "from n=", inv_n_p2))
 }
 print(paste("LAA Corr:", LAA_mean_correlation, "with SD:", LAA_sd_correlation))
