@@ -194,7 +194,7 @@ for(i in 1:n_files){
     if(length(inv_start_index)>1 | length(inv_end_index)>1){
       inv_freq_all[i] <- NA
     } else {
-      inv_freq_all[i] <- mean(ms_binary[,breakpoint_indeces[1]])
+      inv_freq_all[i] <- mean(ms_binary[,inv_start_index])
     }
   }
   
