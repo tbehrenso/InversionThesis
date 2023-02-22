@@ -247,7 +247,7 @@ allele1_sd_p2 <- sd(freq_allele1[tags_index$population=='p2'], na.rm=T)
 allele2_freq_p1 <- mean(freq_allele2[tags_index$population=='p1'], na.rm=T)
 allele2_sd_p1 <- sd(freq_allele2[tags_index$population=='p1'], na.rm=T)
 allele2_freq_p2 <- mean(freq_allele2[tags_index$population=='p2'], na.rm=T)
-allele2_freq_p2 <- sd(freq_allele2[tags_index$population=='p2'], na.rm=T)
+allele2_sd_p2 <- sd(freq_allele2[tags_index$population=='p2'], na.rm=T)
 
 # polymorphism count
 average_polymorphism_count <- mean(polymorphism_counts)
