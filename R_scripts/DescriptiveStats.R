@@ -311,7 +311,7 @@ minversion_secondLAA <- mean(inversion_secondLAA, na.rm=T)
 minversion_noLAA <- mean(inversion_noLAA, na.rm=T)
 mnoinv_bothLAA <- mean(noinv_bothLAA, na.rm=T)
 mnoinv_firstLAA <- mean(noinv_firstLAA, na.rm=T)
-mnoinv_secondLAA <- nmean(noinv_secondLAA, na.rm=T)
+mnoinv_secondLAA <- mean(noinv_secondLAA, na.rm=T)
 mnoinv_noLAA <- mean(noinv_noLAA, na.rm=T)
 
 
