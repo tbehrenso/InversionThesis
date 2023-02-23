@@ -176,6 +176,17 @@ freq_allele2 <- numeric(n_files)
 inv_freq_all <- numeric(n_files)
 polymorphism_counts <- numeric(n_files)
 LAA_correlation_all <- numeric(n_files)
+
+# HAPLOTYPE COUNTS VECTOR
+inversion_bothLAA <- numeric(n_files)
+inversion_firstLAA <- numeric(n_files)
+inversion_secondLAA <- numeric(n_files)
+inversion_noLAA <- numeric(n_files)
+noinv_bothLAA <- numeric(n_files)
+noinv_firstLAA <- numeric(n_files)
+noinv_secondLAA <- numeric(n_files)
+noinv_noLAA <- numeric(n_files)
+
 # correlations_3d <- array(numeric(), dim=c(N_TILES, N_TILES, n_files))  # NOTE: end up switching a lot between long and wide here
 #      maybe change so its all in long?
 
@@ -240,6 +251,21 @@ for(i in 1:n_files){
     LAA_correlation_all[i] <- NA
   }
   
+  if(LAA_PRESENT & INVERSION_PRESENT &
+     length(which(abs_positions==FIXED_MUTATION_POS1))==1 & length(which(abs_positions==FIXED_MUTATION_POS2))==1 &
+     length(which(abs_positions==INV_START))==1 & length(which(abs_positions==INV_END-1))==1){
+    inversion_bothLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==1,])
+    inversion_firstLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==0,])
+    inversion_secondLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==1,])
+    inversion_noLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==0,])
+    noinv_bothLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==1,])
+    noinv_firstLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==0,])
+    noinv_secondLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==1,])
+    noinv_noLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==0,])
+    
+  }
+  
+  
 }
 
 
@@ -273,9 +299,19 @@ if(INVERSION_PRESENT){
   #print(inv_freq_all[tags_index$population=='p1'])
 }
 
-
 LAA_mean_correlation <- mean(LAA_correlation_all, na.rm=T)
 LAA_sd_correlation <- sd(LAA_correlation_all, na.rm=T)
+
+
+minversion_bothLAA <- mean(inversion_bothLAA, na.rm=T)
+minversion_firstLAA <- mean(inversion_firstLAA, na.rm=T)
+minversion_secondLAA <- mean(inversion_secondLAA, na.rm=T)
+minversion_noLAA <- mean(inversion_noLAA, na.rm=T)
+mnoinv_bothLAA <- mean(noinv_bothLAA, na.rm=T)
+mnoinv_firstLAA <- mean(noinv_firstLAA, na.rm=T)
+mnoinv_secondLAA <- nmean(noinv_secondLAA, na.rm=T)
+mnoinv_noLAA <- mean(noinv_noLAA, na.rm=T)
+
 
 print(simtype)
 print(paste("Overall neutral frequency:", overall_neutral_frequency))
@@ -290,3 +326,12 @@ if(INVERSION_PRESENT){
   print(paste("Inversion Freq P2:", inv_freq_p2, "with SD:", inv_stdev_p2, "from n=", inv_n_p2))
 }
 print(paste("LAA Corr:", LAA_mean_correlation, "with SD:", LAA_sd_correlation))
+
+print(paste("minversion_bothLAA", minversion_bothLAA))
+print(paste("minversion_firstLAA", minversion_firstLAA))
+print(paste("minversion_secondLAA", minversion_secondLAA))
+print(paste("minversion_noLAA", minversion_noLAA))
+print(paste("mnoinv_bothLAA", mnoinv_bothLAA))
+print(paste("mnoinv_firstLAA", mnoinv_firstLAA))
+print(paste("mnoinv_secondLAA", mnoinv_secondLAA))
+print(paste("mnoinv_noLAA", mnoinv_noLAA))
