@@ -254,14 +254,14 @@ for(i in 1:n_files){
   if(LAA_PRESENT & INVERSION_PRESENT &
      length(which(abs_positions==FIXED_MUTATION_POS1))==1 & length(which(abs_positions==FIXED_MUTATION_POS2))==1 &
      length(which(abs_positions==INV_START))==1 & length(which(abs_positions==INV_END-1))==1){
-    inversion_bothLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==1,])
-    inversion_firstLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==0,])
-    inversion_secondLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==1,])
-    inversion_noLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==1 & ms_binary[,INV_END-1]==1 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==0,])
-    noinv_bothLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==1,])
-    noinv_firstLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==1 & ms_binary[,FIXED_MUTATION_POS2]==0,])
-    noinv_secondLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==1,])
-    noinv_noLAA[i] <- nrow(ms_binary[ms_binary[,INV_START]==0 & ms_binary[,INV_END-1]==0 & ms_binary[,FIXED_MUTATION_POS1]==0 & ms_binary[,FIXED_MUTATION_POS2]==0,])
+    inversion_bothLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==1 & ms_binary[,which(abs_positions==INV_END-1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==1,])
+    inversion_firstLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==1 & ms_binary[,which(abs_positions==INV_END-1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==0,])
+    inversion_secondLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==1 & ms_binary[,which(abs_positions==INV_END-1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==1,])
+    inversion_noLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==1 & ms_binary[,which(abs_positions==INV_END-1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==0,])
+    noinv_bothLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==0 & ms_binary[,which(abs_positions==INV_END-1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==1,])
+    noinv_firstLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==0 & ms_binary[,which(abs_positions==INV_END-1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==1 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==0,])
+    noinv_secondLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==0 & ms_binary[,which(abs_positions==INV_END-1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==1,])
+    noinv_noLAA[i] <- nrow(ms_binary[ms_binary[,which(abs_positions==INV_START)]==0 & ms_binary[,which(abs_positions==INV_END-1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS1)]==0 & ms_binary[,which(abs_positions==FIXED_MUTATION_POS2)]==0,])
     
   }
   
