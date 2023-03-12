@@ -29,8 +29,8 @@ LAA_PRESENT <- TRUE
 
 # reusable layer for ggplot to include marker lines for inversion bounds (blue) and locally adapted alleles (red)
 gglayer_markers <- list(
-  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red', alpha=0.3)},
-  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='dotted', colour='blue', alpha=0.3)}
+  {if(LAA_PRESENT)geom_vline(xintercept = c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), linetype='dashed', colour='red', alpha=0.7)},
+  {if(INVERSION_PRESENT)geom_vline(xintercept = c(INV_START, INV_END), linetype='dotted', colour='blue', alpha=0.7)}
 )
 
 
@@ -81,7 +81,7 @@ ggplot(melt(subset(fst_average_all, select=-c(LAA, inv, invLAA)), id='pos'), aes
   ylim(NA, max_fst) +
   scale_color_manual(values=c(hex[1]))
 
-ggplot(melt(subset(fst_average_all, select=-c(inv, invLAA)), id='pos'), aes(x=pos, y=value, col=variable)) +
+ggplot(melt(subset(fst_average_all, select=-c(LAA, invLAA)), id='pos'), aes(x=pos, y=value, col=variable)) +
   geom_line() +
   ggtitle('F_ST between Populations') + 
   xlab('Position') + ylab(expression(F[ST])) +
@@ -89,7 +89,7 @@ ggplot(melt(subset(fst_average_all, select=-c(inv, invLAA)), id='pos'), aes(x=po
   ylim(NA, max_fst) +
   scale_color_manual(values=c(hex[1], hex[2]))
 
-ggplot(melt(subset(fst_average_all, select=-c(invLAA)), id='pos'), aes(x=pos, y=value, col=variable)) +
+ggplot(melt(subset(fst_average_all, select=-c(LAA)), id='pos'), aes(x=pos, y=value, col=variable)) +
   geom_line() +
   ggtitle('F_ST between Populations') + 
   xlab('Position') + ylab(expression(F[ST])) +
@@ -99,12 +99,13 @@ ggplot(melt(subset(fst_average_all, select=-c(invLAA)), id='pos'), aes(x=pos, y=
 
 ggplot(melt(fst_average_all, id='pos'), aes(x=pos, y=value, col=variable)) +
   geom_line() +
-  ggtitle('F_ST between Populations') + 
-  xlab('Position') + ylab(expression(F[ST])) +
+  #ggtitle('F_ST between Populations') + 
+  xlab('Position') + ylab(bquote(F["ST"]*" between P1 and P2")) +
   gglayer_markers +
-  ylim(NA, max_fst) +
-  scale_color_manual(values=c(hex[1], hex[2], hex[3], hex[4]))
-
+  ylim(0, max_fst+max_fst*0.05) +
+  scale_color_manual(values=c(hex[1], hex[2], hex[3], hex[4]), labels=c("neutral", "LAA", "adapInv", "invLAA")) +
+  labs(color='Scenario') + theme_bw() + coord_cartesian(expand=F) + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 # -------------------------------------------------------------------------------------------
 

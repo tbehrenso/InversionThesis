@@ -188,8 +188,13 @@ sfs_2D_long$value <- log10(sfs_2D_long$value + 1)
 
 sfs_2D_plot <- ggplot(sfs_2D_long, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  scale_fill_gradient(low='white', high='blue') +
-  ggtitle('2D SFS') + xlab('Allele Freq - P1') + ylab('Allele Freq - P2')
+  scale_fill_gradient(low='white', high='blue', limits=c(0,4.3)) +
+  #ggtitle('2D SFS') + 
+  xlab('Allele Frequency - P1') + ylab('Allele Frequency - P2') +
+  scale_x_continuous(n.breaks=10, expand=c(0,0)) +
+  scale_y_continuous(n.breaks=10, expand=c(0,0)) +
+  theme(axis.line = element_line(color="black", size = 0.5)) +
+  coord_fixed()
 
 if(on_cluster){
   ggsave('sfs_2D.png', sfs_2D_plot, path=paste("Plots", args[1], args[2], sep="/"), width=20, height=18)
@@ -197,4 +202,47 @@ if(on_cluster){
 }else{
   print(sfs_2D_plot)
 }
+
+
+# -------------------------------------------------------------
+# PLOTTING TWO NEXT TO EACH OTHER
+
+
+
+# (LOAD DATA FIRST)
+sfs_2D_long_invLAA <- loadRData('C:/Users/tbehr/Desktop/data_summary/inversionLAA_2pop_s0.1_m0.01_mu1e-5_r1e-6/15000/sfs_2D_long_LOG.Rds')
+sfs_2D_long_adapInv <- loadRData('C:/Users/tbehr/Desktop/data_summary/adaptiveInversion_2pop_s0.1_m0.01_mu1e-5_r1e-6/15000/sfs_2D_long_LOG.Rds')
+
+sfs_2D_long_invLAA$Var1 <- sfs_2D_long_invLAA$Var1/200
+sfs_2D_long_invLAA$Var2 <- sfs_2D_long_invLAA$Var2/200
+sfs_2D_long_adapInv$Var1 <- sfs_2D_long_adapInv$Var1/200
+sfs_2D_long_adapInv$Var2 <- sfs_2D_long_adapInv$Var2/200
+
+
+max_value <- max(c(sfs_2D_long_invLAA$value, sfs_2D_long_adapInv$value))
+
+sfs_2D_plot_invLAA <- ggplot(sfs_2D_long_invLAA, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  ggtitle('a) invLAA') +
+  scale_fill_gradient(low='white', high='blue', limits=c(0,max_value), name='Allele \nFrequency\n(log10)') +
+  #ggtitle('2D SFS') + 
+  xlab('Allele Frequency - P1') + ylab('Allele Frequency - P2') +
+  scale_x_continuous(n.breaks=10, expand=c(0,0)) +
+  scale_y_continuous(n.breaks=10, expand=c(0,0)) +
+  theme(axis.line = element_line(color="black", size = 0.5)) +
+  coord_fixed()
+
+sfs_2D_plot_adapInv <- ggplot(sfs_2D_long_adapInv, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  ggtitle('b) adapInv') +
+  scale_fill_gradient(low='white', high='blue', limits=c(0,max_value), name='Allele \nFrequency\n(log10)') +
+  #ggtitle('2D SFS') + 
+  xlab('Allele Frequency - P1') + ylab('Allele Frequency - P2') +
+  scale_x_continuous(n.breaks=10, expand=c(0,0)) +
+  scale_y_continuous(n.breaks=10, expand=c(0,0)) +
+  theme(axis.line = element_line(color="black", size = 0.5)) +
+  coord_fixed()
+
+sfs_2D_plot_both <- grid.arrange(sfs_2D_plot_invLAA, sfs_2D_plot_adapInv, nrow=1)
+
 

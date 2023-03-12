@@ -213,24 +213,12 @@ corr_summ_p2_long <- subset(corr_summ_p2_long, Var2 >= INV_START & Var2 <= INV_E
 corr_a <- ggplot(corr_summ_p1_long, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
   scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P1') + xlab('Position') + ylab('Position') +
-  annotate(xmin=110000, xmax=112000, 
-           ymin=c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), ymax=c(FIXED_MUTATION_POS1+500, FIXED_MUTATION_POS2+500), 
-           geom='rect', fill=c("red", "red")) +
-  annotate(xmin=c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), xmax=c(FIXED_MUTATION_POS1+500, FIXED_MUTATION_POS2+500), 
-           ymin=110000, ymax=112000,
-           geom='rect', fill=c("red", "red"))
+  ggtitle('P1') + xlab('Position') + ylab('Position')
 
 corr_b <- ggplot(corr_summ_p2_long, aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
   scale_fill_gradient(low='white', high='blue') +
-  ggtitle('P2') + xlab('Position') + ylab('Position') +
-  annotate(xmin=110000, xmax=112000, 
-           ymin=c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), ymax=c(FIXED_MUTATION_POS1+500, FIXED_MUTATION_POS2+500), 
-           geom='rect', fill=c("red", "red")) +
-  annotate(xmin=c(FIXED_MUTATION_POS1, FIXED_MUTATION_POS2), xmax=c(FIXED_MUTATION_POS1+500, FIXED_MUTATION_POS2+500), 
-           ymin=110000, ymax=112000,
-           geom='rect', fill=c("red", "red"))
+  ggtitle('P2') + xlab('Position') + ylab('Position')
 
 plot_correlation <- grid.arrange(corr_a, corr_b, nrow=1)
 
